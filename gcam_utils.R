@@ -137,7 +137,7 @@ process_xml_inputs <- function(land_roots, gcam_land_alloc, nleaves=0, nrows=0){
       # print(count+1)
       # print(i)
       # print('===================================')
-      # 
+      
       new_leaf_data <- process_leaf(leaf,gcam_land_alloc) 
       count <- count+1
       idx <- count+nrows-1
@@ -230,7 +230,7 @@ get_leaf_land_alloc <- function(leaf_node, leaf_name, leaf_region, gcam_land_all
 
   # if doesn't exist in the GCAM data base but does in XML with all 0 historical
   # (1700-1950) allocation, then Just need to make 0 for all of the years to 2100. 
-  if(is.na(first_model_year) & max(abs(land_alloc_df$value)) == 0){
+  if(is.na(first_model_year) & max(abs(land_alloc_df$value), na.rm = T) == 0){
     
     # last year from the xml inputs:
     max_inputxml_yr <- max(land_alloc_df$year)
@@ -258,7 +258,6 @@ get_leaf_land_alloc <- function(leaf_node, leaf_name, leaf_region, gcam_land_all
     
     land_alloc_all_years <- rbind(land_alloc_df,gcam_leaf_land_alloc)
   }
-
   
   # clean up row names
   rownames(land_alloc_all_years) <- 1:length(land_alloc_all_years$year)
@@ -302,7 +301,7 @@ parse_land_alloc <- function(leaf_data){
         mdrn_df[mdrn_df$year==data_year,] <- c(data_year,data_value)
       }
     }
-  } else if (max(abs(hist_df$value)) == 0 & n_mdrn==0){
+  } else if (max(abs(hist_df$value)) <1e-6 & n_mdrn==0){
     mdrn_df <- data.frame(year=mdrn_years,value=0)
   }
   hist_df <- hist_df[1:(length(hist_df$year)-1),]  # remove 1975 overlap
