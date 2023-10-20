@@ -7,8 +7,8 @@ library(tidyr)
 # necessary inputs: 5 gcam land xmls + 2 protected lands, gcam database (for grabbing modern land allocation data)
 # will need to set paths for each of these in code below
 
-read_data <- FALSE  # set this flag if land allocation data needs to be updated. If false, will read from saved files
-read_params <- FALSE # set this flag if land leaf parameter data needs to be updated (carbon densities, soil timescales, etc). If false, will read from saved files
+read_data <- TRUE  # set this flag if land allocation data needs to be updated. If false, will read from saved files
+read_params <- TRUE # set this flag if land leaf parameter data needs to be updated (carbon densities, soil timescales, etc). If false, will read from saved files
 protected <- TRUE # set this flag to include protected lands. If true, will read in protected lands data to replace land inputs 2 & 3
 
 year0 <- 1745
@@ -29,9 +29,9 @@ coupled= TRUE  # this refers to coupling with Hector. If true, then NBP_constrai
 if (read_data){
   # get input data from GCAM
     gcam_land_alloc <- get_gcam_land_alloc(db_name="database_basexdb",
-                                           gcam_dir= "reference",
+                                           gcam_dir= "reference/DawnDB/",
                                            scenario="Reference",
-                                           read_from_file=TRUE)
+                                           read_from_file=FALSE)
     # scenario is doing nothing when read_from_file is TRUE
     
     land_roots <- read_land_inputs_xml2(folder = "reference", protected = protected)
@@ -98,7 +98,7 @@ output <- run_all_years(outer_land_alloc2, outer_params2, ini_file,
                         rhEff=rhEff, betaEff=betaEff,
                         cCycling=ccycling, coupled=coupled)
 
-scenario_name <- "full_world_real-protected_2100"
+scenario_name <- "full_world_protected_DawnDB_2100"
 write.csv(output[["leaf_data"]],file=paste0("data/leaf_data_",scenario_name,".csv"))
 write.csv(output[["params"]],file=paste0("data/leaf_params_",scenario_name,".csv"))
 write.csv(output[["climate"]],file=paste0("data/climate_data_",scenario_name,".csv"))
