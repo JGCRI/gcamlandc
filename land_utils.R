@@ -212,8 +212,6 @@ initialize_data <- function(land_alloc, params, year0, leaf_data, climate_data, 
   leaf_data0 <- leaf_data[year=={{year0}},]
   land_alloc0 <- land_alloc[year=={{year0}},]
 
-  browser()
-  
   #matching carbon density and mature age data from protected leaves to their unprotected
   #counterparts, which have no values in xmls
   params %>%
