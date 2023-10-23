@@ -1,15 +1,16 @@
 # run with GCAM data (see [other script] for example running with other data)
-source("gcam_utils.R")
+source("ACSgcam_utils.R")
 source("land_utils.R")
 library(tidyr)
-#Sys.setenv("PATH" = "C:/Users/morr497/Documents/OneDriveSafeSpace/openjdk-20.0.1_windows-x64_bin/jdk-20.0.1/bin")
+
+#Sys.setenv("PATH" = "C:/Users/morr497/Documents/OneDriveSafeSpace/openjdk-21.0.1_windows-x64_bin/jdk-21.0.1/bin")
 
 # necessary inputs: 5 gcam land xmls + 2 protected lands, gcam database (for grabbing modern land allocation data)
 # will need to set paths for each of these in code below
 
 read_data <- TRUE  # set this flag if land allocation data needs to be updated. If false, will read from saved files
 read_params <- TRUE # set this flag if land leaf parameter data needs to be updated (carbon densities, soil timescales, etc). If false, will read from saved files
-protected <- TRUE # set this flag to include protected lands. If true, will read in protected lands data to replace land inputs 2 & 3
+protected <- FALSE # set this flag to include protected lands. If true, will read in protected lands data to replace land inputs 2 & 3
 
 year0 <- 1745
 last_year <- 2100  # the year to have carbon emissions vectors go through
@@ -28,13 +29,13 @@ coupled= TRUE  # this refers to coupling with Hector. If true, then NBP_constrai
 
 if (read_data){
   # get input data from GCAM
-    gcam_land_alloc <- get_gcam_land_alloc(db_name="database_basexdb",
-                                           gcam_dir= "reference/DawnDB/",
+    gcam_land_alloc <- get_gcam_land_alloc(db_name="database_basexdbGCAM_SSP1",
+                                           gcam_dir= "pic_data/pic_hist_no_prot_land_DB/",
                                            scenario="Reference",
-                                           read_from_file=FALSE)
+                                           read_from_file= FALSE)
     # scenario is doing nothing when read_from_file is TRUE
     
-    land_roots <- read_land_inputs_xml2(folder = "reference", protected = protected)
+    land_roots <- read_land_inputs_xml2(folder = "pic_data/pic_inputs", protected = protected)
     leaf_data <- process_xml_inputs(land_roots, gcam_land_alloc)
 if(protected){
   saveRDS(leaf_data,file="data/protected_leaf_data.RDS")  # store for future use
@@ -98,7 +99,7 @@ output <- run_all_years(outer_land_alloc2, outer_params2, ini_file,
                         rhEff=rhEff, betaEff=betaEff,
                         cCycling=ccycling, coupled=coupled)
 
-scenario_name <- "full_world_protected_DawnDB_2100"
+scenario_name <- "full_world_reference_PIC_DB_2100"
 write.csv(output[["leaf_data"]],file=paste0("data/leaf_data_",scenario_name,".csv"))
 write.csv(output[["params"]],file=paste0("data/leaf_params_",scenario_name,".csv"))
 write.csv(output[["climate"]],file=paste0("data/climate_data_",scenario_name,".csv"))
