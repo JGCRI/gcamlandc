@@ -29,8 +29,8 @@ coupled= TRUE  # this refers to coupling with Hector. If true, then NBP_constrai
 
 if (read_data){
   # get input data from GCAM
-    gcam_land_alloc <- get_gcam_land_alloc(db_name="database_basexdbGCAM_SSP1",
-                                           gcam_dir= "pic_data/pic_hist_no_prot_land_DB/",
+    gcam_land_alloc <- get_gcam_land_alloc(db_name="database_basexdbGCAM",
+                                           gcam_dir= "pic_data/pic_hist_ref_DB/",
                                            scenario="Reference",
                                            read_from_file= FALSE)
     # scenario is doing nothing when read_from_file is TRUE
