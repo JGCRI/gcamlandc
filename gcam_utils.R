@@ -484,16 +484,16 @@ get_gcam_emissions <- function(db_name="database_basexdb", gcam_dir="reference")
 
 # TODO figure out better place to put this
 read_luc_data <- function() {
-  gcp_hist <- read.csv("~/Dropbox/Research/gcam_projects/LUC/data/gcp_historical.csv", header=TRUE, skip=14)
-  gcp_mdrn <- read.csv("~/Dropbox/Research/gcam_projects/LUC/data/gcp_modern.csv",header=TRUE, skip=27)
+  gcp_hist <- read.csv("C:/Users/morr497/Documents/OneDriveSafeSpace/jgcri/LUC/LUC/data/gcp_historical.csv", header=TRUE, skip=14)
+  gcp_mdrn <- read.csv("C:/Users/morr497/Documents/OneDriveSafeSpace/jgcri/LUC/LUC/data/gcp_modern.csv",header=TRUE, skip=27)
   gcp_hist <- gcp_hist[101:nrow(gcp_hist),1:7]
   gcp_hist <- as_tibble(gcp_hist)
   gcp_mdrn <- as_tibble(gcp_mdrn)
   names(gcp_hist) <- c("year", "fossil", "luc", "atm", "ocean", "land", "imbalance")
   
-  houghton_regions <- read.csv("~/Dropbox/Research/gcam_projects/LUC/data/houghton_regions.csv")
+  houghton_regions <- read.csv("C:/Users/morr497/Documents/OneDriveSafeSpace/jgcri/LUC/LUC/data/houghton_regions.csv")
   
-  nc <- nc_open("~/Dropbox/Research/gcam_projects/LUC/data/Gasser_et_al_2020_best_guess.nc")
+  nc <- nc_open("C:/Users/morr497/Documents/OneDriveSafeSpace/jgcri/LUC/LUC/data/Gasser_et_al_2020_best_guess.nc")
   v4 <- nc$var[[4]]
   gasser_yr <- v4$dim[[5]]$vals
   gasser <- ncvar_get(nc,v4)

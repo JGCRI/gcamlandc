@@ -436,7 +436,7 @@ get_soilTS_byRegion <- function(root_node){
   return(data)
 }
 
-get_gcam_land_alloc <- function(db_name="database_basexdb", gcam_dir="reference", scenario="Reference", read_from_file=FALSE, filename="data/gcam_land_alloc.csv"){
+get_gcam_land_alloc <- function(db_name="database_basexdbGCAM", gcam_dir="pic_data/pic_hist_base_DB/", scenario="Reference", read_from_file=FALSE, filename="data/gcam_land_alloc.csv"){
   
   if (read_from_file) {
     gcam_land_alloc <- read.csv2(file=filename,header=TRUE)

@@ -77,7 +77,7 @@ ggsave(filename=paste0("climate_data.png"),plot=fig,width=10,height=6)
 
 
 #For comparing to Global Carbon Project
-gcp_data <- read.csv("extdata/nbp_gcp.csv")
+gcp_data <- read.csv("C:/Users/morr497/Documents/OneDriveSafeSpace/jgcri/extdata/extdata/nbp_gcp.csv")
 
 gcp_data$scenario <- "Global Carbon Project"
 #library(zoo)
@@ -418,19 +418,19 @@ plot_data_emiss <- select(plot_data,c("year","name","scenario","region", "tot_nb
 
 # get managed only
 
-all_leaves <- unique(plot_data_emiss$name)
-managed_leaves <- grep("Pasture", all_leaves, value=TRUE)
-rest <- grep("Pasture", all_leaves, value=TRUE,invert=TRUE)
-length(rest)
-rest <- grep("Unmanaged | Tundra | RockIceDesert",rest,value=TRUE,invert=TRUE)  # remove all explicitly "unmanaged" leaves from 'rest'
-rest <- grep("RockIceDesert",rest,value=TRUE,invert=TRUE)  # remove all explicitly "unmanaged" leaves from 'rest'
+all_leaves <- unique(plot_data_emiss$name) #all leaf names
+mixed_managed_leaves <- grep("Unmanaged", all_leaves, value=TRUE, invert = TRUE) #remove Unmanaged
+managed_leaves <- grep("RockIceDesert|Tundra", mixed_managed_leaves, value=TRUE, invert=TRUE)
+
+mixed_remainder <- grep("Unmanaged", all_leaves, value=TRUE) #select Unmanaged
+remainder_leaves <- grep("RockIceDesert|Tundra", mixed_remainder, value=TRUE, invert = TRUE) #select rock/ice/desert/tundra
 
 
 
 # remaining are all forest, crops, shrubland, grassland, & pasture
 
 
-managed_leaves <- c(managed_leaves,rest) # add in all remaining leaves
+managed_leaves <- c(managed_leaves,remainder_leaves) # add in all remaining leaves
 
 managed_data <- dplyr::filter(plot_data_emiss,name %in% managed_leaves)
 unmgd_data <- dplyr::filter(plot_data_emiss,!(name %in% managed_leaves))
@@ -443,21 +443,23 @@ unmgd_data %>% group_by(region,scenario, year) %>% summarise(nbp=sum(tot_nbp)) -
 
 unmgd_data %>% group_by(scenario, year) %>% summarise(nbp=sum(tot_nbp)) -> world_totals_unmgd
 
-world_totals_unmgd <- world_totals_unmgd %>% dplyr::filter(scenario=="fully-coupled") %>%
+world_totals_unmgd <- world_totals_unmgd %>% dplyr::filter(scenario=="Protected") %>%
   mutate(scenario="Unmanaged")
 
-world_totals_all <- world_totals %>% dplyr::filter(scenario=="fully-coupled") %>%
+#Need to create new world_totals by combining managed and unmanaged
+
+world_totals_all <- world_totals %>% dplyr::filter(scenario=="Protected") %>%
   mutate(scenario="Unmanaged+Managed")
 
-world_totals_mgd <- world_totals_mgd %>% dplyr::filter(scenario=="fully-coupled") %>%
+world_totals_mgd <- world_totals_mgd %>% dplyr::filter(scenario=="Protected") %>%
   mutate(scenario="Managed")
 
 world_totals_base <- world_totals %>% dplyr::filter(scenario=="baseline") %>%
   mutate(scenario="Baseline")
 
 
-
-world_totals_compare <- dplyr::bind_rows(world_totals_base,world_totals_mgd,world_totals_all,world_totals_unmgd)
+world_totals_compare <- dplyr::bind_rows(world_totals_mgd,world_totals_all,world_totals_unmgd)
+#world_totals_compare <- dplyr::bind_rows(world_totals_base,world_totals_mgd,world_totals_all,world_totals_unmgd)
 
 
 ggplot(data=world_totals_compare,aes(x=year,y=nbp,linetype=scenario))+
