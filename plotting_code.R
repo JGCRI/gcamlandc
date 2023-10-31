@@ -13,8 +13,9 @@ ggplot(data=plot_data_long,aes(x=year,y=value))+
 
 #to graph the following we'd need to combine
 #reference (baseline) scenario with protected lands scenario
-#rename dataframes and add sceanrio column as appropriate
-plot_data_long_base$scenario <- "baseline"
+#rename dataframes and add scenario column as appropriate
+#plot_data_long_base$scenario <- "baseline"
+plot_data_long$scenario <- "protected"
 plot_data_all <- dplyr::bind_rows(plot_data_long,plot_data_long_base)
 
 ggplot(data=filter(plot_data_all,variable %in% c("tot_nbp","agCDensity","bgCDensity")),
@@ -80,9 +81,9 @@ ggsave(filename=paste0("climate_data.png"),plot=fig,width=10,height=6)
 gcp_data <- read.csv("C:/Users/morr497/Documents/OneDriveSafeSpace/jgcri/extdata/extdata/nbp_gcp.csv")
 
 gcp_data$scenario <- "Global Carbon Project"
-#library(zoo)
+library(zoo)
 gcp_data$nbp <- rollmean(gcp_data$nbp*1000,k=10,fill=NA)
-world_total_gcp <- dplyr::bind_rows(world_totals,gcp_data)
+world_total_gcp <- dplyr::bind_rows(world_totals[world_totals$scenario != "Unmanaged",],gcp_data)
 
 world_total_gcp$scenario <- factor(world_total_gcp$scenario,
                                    levels=c("Global Carbon Project","baseline","fully-coupled"))
@@ -103,11 +104,11 @@ ggsave(filename="world_2015.png",plot=fig,width=8,height=3.5)
 
 # make raw figure
 
-gcp_data_raw <- read.csv("extdata/nbp_gcp.csv")
+gcp_data_raw <- gcp_data
 gcp_data_raw$nbp <- gcp_data_raw$nbp*1000
 
 gcp_data_raw$scenario <- "Global Carbon Project"
-world_total_gcp_raw <- dplyr::bind_rows(world_totals,gcp_data_raw)
+world_total_gcp_raw <- dplyr::bind_rows(world_totals[world_totals$scenario != "Unmanaged",],gcp_data_raw)
 
 world_total_gcp_raw$scenario <- factor(world_total_gcp_raw$scenario,
                                        levels=c("Global Carbon Project","baseline","fully-coupled"))
@@ -446,13 +447,13 @@ unmgd_data %>% group_by(scenario, year) %>% summarise(nbp=sum(tot_nbp)) -> world
 world_totals_unmgd <- world_totals_unmgd %>% dplyr::filter(scenario=="Protected") %>%
   mutate(scenario="Unmanaged")
 
-#Need to create new world_totals by combining managed and unmanaged
+world_totals_mgd <- world_totals_mgd %>% dplyr::filter(scenario=="Protected") %>%
+  mutate(scenario="Managed")
+
+world_totals <- bind_rows(world_totals_mgd, world_totals_unmgd)
 
 world_totals_all <- world_totals %>% dplyr::filter(scenario=="Protected") %>%
   mutate(scenario="Unmanaged+Managed")
-
-world_totals_mgd <- world_totals_mgd %>% dplyr::filter(scenario=="Protected") %>%
-  mutate(scenario="Managed")
 
 world_totals_base <- world_totals %>% dplyr::filter(scenario=="baseline") %>%
   mutate(scenario="Baseline")
@@ -461,8 +462,8 @@ world_totals_base <- world_totals %>% dplyr::filter(scenario=="baseline") %>%
 world_totals_compare <- dplyr::bind_rows(world_totals_mgd,world_totals_all,world_totals_unmgd)
 #world_totals_compare <- dplyr::bind_rows(world_totals_base,world_totals_mgd,world_totals_all,world_totals_unmgd)
 
-
-ggplot(data=world_totals_compare,aes(x=year,y=nbp,linetype=scenario))+
+                        #compare
+ggplot(data=world_totals_all,aes(x=year,y=nbp,linetype=scenario))+
   geom_line()+
   ylab("LUC Emissions (Mt C/yr") +
   theme_classic() -> fig
