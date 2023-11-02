@@ -479,7 +479,7 @@ get_gcam_emissions <- function(db_name="database_basexdb", gcam_dir="reference")
          <xPath buildList="true" dataName="land-use-change-emission" group="false" sumAll="true">/LandNode[@name=\'root\' or @type=\'LandNode\' (: collapse :)]//land-use-change-emission/text()</xPath>
          <comments/>
       </query>'
-#can this be deleted?  
+#TODO can this be deleted?  
   new.proj <- addSingleQuery(base_conn, "new.proj", "Land Use Change Emissions", luc_query, c("Reference"), clobber=TRUE)
   
   gcam_luc <- getQuery(new.proj, "Land Use Change Emissions")

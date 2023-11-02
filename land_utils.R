@@ -75,7 +75,6 @@ getCDensityBelow <- function(idx, NPP, Rh, litter, prevDensityBelow, landArea, p
 
   f_bgnpp <- 0.65
   #f_bgnpp <- 0.0
-  #print(c(f_bgnpp*NPP,litter,Rh,(f_bgnpp*NPP + litter - Rh)/landArea))
   currDensityBelow <- prevDensityBelow + (f_bgnpp*NPP + litter - Rh)/landArea
 
   return(max(currDensityBelow,0))
