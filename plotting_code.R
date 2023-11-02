@@ -554,3 +554,58 @@ ggplot(data=dplyr::filter(plot_data_long,name %in% test_leaves),aes(x=year,y=val
   geom_line()+
   facet_wrap(variable~name,scales="free_y")+
   theme_classic()
+
+
+# TODO figure out better place to put this
+read_luc_data <- function() {
+  gcp_hist <- read.csv("~/Dropbox/Research/gcam_projects/LUC/data/gcp_historical.csv", header=TRUE, skip=14)
+  gcp_mdrn <- read.csv("~/Dropbox/Research/gcam_projects/LUC/data/gcp_modern.csv",header=TRUE, skip=27)
+  gcp_hist <- gcp_hist[101:nrow(gcp_hist),1:7]
+  gcp_hist <- as_tibble(gcp_hist)
+  gcp_mdrn <- as_tibble(gcp_mdrn)
+  names(gcp_hist) <- c("year", "fossil", "luc", "atm", "ocean", "land", "imbalance")
+  
+  houghton_regions <- read.csv("~/Dropbox/Research/gcam_projects/LUC/data/houghton_regions.csv")
+  
+  nc <- nc_open("~/Dropbox/Research/gcam_projects/LUC/data/Gasser_et_al_2020_best_guess.nc")
+  v4 <- nc$var[[4]]
+  gasser_yr <- v4$dim[[5]]$vals
+  gasser <- ncvar_get(nc,v4)
+  
+  varsize <- v4$varsize
+  ndims   <- v4$ndims
+  nt      <- varsize[ndims]  # Remember timelike dim is always the LAST dimension!
+  
+  gasser_keys <- c("Unknown"=0, "Sub-Saharan Africa"=1, "Latin America"=2,  "South and Southeast Asia"=3,
+                   "North America"=4, "Europe"=5, "Former USSR"=6, "China"=7,
+                   "North Africa and the Middle East"=8, "East Asia"=9,  "Oceania"=10)
+  
+  gcam_gasser <- list("Sub-Saharan Africa"=c("South Africa", "Africa_Eastern", "Africa_Southern", "Africa_Western"),
+                      "Latin America"=c("Argentina", "Brazil", "Columbia", "Mexico", "South America_Northern", "South America_Southern", "Central America and the Caribbean"),
+                      "South and Southeast Asia" = c("Pakistan", "India", "Indonesia", "South Asia", "Southeast Asia"),
+                      "North America" = c("Canada", "USA"),
+                      "Europe"= c("EU-12", "EU-15", "Europe Free Trade Association", "Europe Non-EU"),
+                      "Former USSR" = c("Russia", "Europe Eastern", "Central Asia"),
+                      "China" = c("China"),
+                      "North Africa and the Middle East" = c("Middle East", "Africa_Northern"),
+                      "East Asia" = c("Japan", "South Korea"),
+                      "Oceania" = c("Australia_NZ"))
+  
+  gasser_luc <- rep(0,nt)
+  for (i in 1:nt){
+    gasser_luc[i] <- sum(gasser[,,,,i])
+  }
+  
+  gasser_luc_reg <- array(0L,c(11,nt))
+  
+  for (i in 1:10){
+    for (j in 1:nt){
+      gasser_luc_reg[i,j] <- sum(gasser[,,,i,j])
+    }
+  }
+  
+  gasser_df <- tibble(luc = gasser_luc, year=gasser_yr)
+  
+  return(list("gasser"=gasser_df, "houghton"=houghton_regions, "gcp_hist"=gcp_hist, "gcp_mdrn"=gcp_mdrn, "gasser_reg"=gasser_luc_reg))
+  
+}
