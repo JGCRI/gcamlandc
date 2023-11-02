@@ -1,6 +1,6 @@
 library(dplyr)  # needed for pipelines
 
-read_land_inputs_xml2 <- function(folder="reference", protected){
+read_land_inputs_xml2 <- function(folder, protected){
   
   land1 <- xml2::read_xml(paste0(folder,"/land_input_1.xml"))
   land1_root <- xml2::xml_root(land1)
@@ -436,7 +436,9 @@ get_soilTS_byRegion <- function(root_node){
   return(data)
 }
 
-get_gcam_land_alloc <- function(db_name="database_basexdb", gcam_dir="reference", scenario="Reference", read_from_file=FALSE, filename="data/gcam_land_alloc.csv"){
+#ATTENTION
+###File paths here!
+get_gcam_land_alloc <- function(db_name="database_basexdbGCAM", gcam_dir="pic_data/pic_hist_base_DB/", scenario="Reference", read_from_file=FALSE, filename="data/gcam_land_alloc.csv"){
   
   if (read_from_file) {
     gcam_land_alloc <- read.csv2(file=filename,header=TRUE)
@@ -466,6 +468,9 @@ get_gcam_land_alloc_by_leaf <- function(leaf_region, leaf_name, gcam_alloc){
   return(leaf_land_alloc)
 }
 
+#ATTENTION
+###File paths here!
+#creates an empty project
 get_gcam_emissions <- function(db_name="database_basexdb", gcam_dir="reference"){
   base_conn <- localDBConn(gcam_dir, db_name)
   luc_query <- '<query title="Land Use Change Emission">
@@ -474,64 +479,10 @@ get_gcam_emissions <- function(db_name="database_basexdb", gcam_dir="reference")
          <xPath buildList="true" dataName="land-use-change-emission" group="false" sumAll="true">/LandNode[@name=\'root\' or @type=\'LandNode\' (: collapse :)]//land-use-change-emission/text()</xPath>
          <comments/>
       </query>'
-  
+#can this be deleted?  
   new.proj <- addSingleQuery(base_conn, "new.proj", "Land Use Change Emissions", luc_query, c("Reference"), clobber=TRUE)
   
   gcam_luc <- getQuery(new.proj, "Land Use Change Emissions")
   return(gcam_luc)
 }
 
-
-# TODO figure out better place to put this
-read_luc_data <- function() {
-  gcp_hist <- read.csv("C:/Users/morr497/Documents/OneDriveSafeSpace/jgcri/LUC/LUC/data/gcp_historical.csv", header=TRUE, skip=14)
-  gcp_mdrn <- read.csv("C:/Users/morr497/Documents/OneDriveSafeSpace/jgcri/LUC/LUC/data/gcp_modern.csv",header=TRUE, skip=27)
-  gcp_hist <- gcp_hist[101:nrow(gcp_hist),1:7]
-  gcp_hist <- as_tibble(gcp_hist)
-  gcp_mdrn <- as_tibble(gcp_mdrn)
-  names(gcp_hist) <- c("year", "fossil", "luc", "atm", "ocean", "land", "imbalance")
-  
-  houghton_regions <- read.csv("C:/Users/morr497/Documents/OneDriveSafeSpace/jgcri/LUC/LUC/data/houghton_regions.csv")
-  
-  nc <- nc_open("C:/Users/morr497/Documents/OneDriveSafeSpace/jgcri/LUC/LUC/data/Gasser_et_al_2020_best_guess.nc")
-  v4 <- nc$var[[4]]
-  gasser_yr <- v4$dim[[5]]$vals
-  gasser <- ncvar_get(nc,v4)
-  
-  varsize <- v4$varsize
-  ndims   <- v4$ndims
-  nt      <- varsize[ndims]  # Remember timelike dim is always the LAST dimension!
-  
-  gasser_keys <- c("Unknown"=0, "Sub-Saharan Africa"=1, "Latin America"=2,  "South and Southeast Asia"=3,
-                   "North America"=4, "Europe"=5, "Former USSR"=6, "China"=7,
-                   "North Africa and the Middle East"=8, "East Asia"=9,  "Oceania"=10)
-  
-  gcam_gasser <- list("Sub-Saharan Africa"=c("South Africa", "Africa_Eastern", "Africa_Southern", "Africa_Western"),
-                      "Latin America"=c("Argentina", "Brazil", "Columbia", "Mexico", "South America_Northern", "South America_Southern", "Central America and the Caribbean"),
-                      "South and Southeast Asia" = c("Pakistan", "India", "Indonesia", "South Asia", "Southeast Asia"),
-                      "North America" = c("Canada", "USA"),
-                      "Europe"= c("EU-12", "EU-15", "Europe Free Trade Association", "Europe Non-EU"),
-                      "Former USSR" = c("Russia", "Europe Eastern", "Central Asia"),
-                      "China" = c("China"),
-                      "North Africa and the Middle East" = c("Middle East", "Africa_Northern"),
-                      "East Asia" = c("Japan", "South Korea"),
-                      "Oceania" = c("Australia_NZ"))
-  
-  gasser_luc <- rep(0,nt)
-  for (i in 1:nt){
-    gasser_luc[i] <- sum(gasser[,,,,i])
-  }
-  
-  gasser_luc_reg <- array(0L,c(11,nt))
-  
-  for (i in 1:10){
-    for (j in 1:nt){
-      gasser_luc_reg[i,j] <- sum(gasser[,,,i,j])
-    }
-  }
-  
-  gasser_df <- tibble(luc = gasser_luc, year=gasser_yr)
-  
-  return(list("gasser"=gasser_df, "houghton"=houghton_regions, "gcp_hist"=gcp_hist, "gcp_mdrn"=gcp_mdrn, "gasser_reg"=gasser_luc_reg))
-  
-}
