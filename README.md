@@ -31,4 +31,22 @@ Land Input XML's 1-5 and protected land inputs 2 & 3
 NOTE - any change in XML structure from the configuration present in GCAMv7 
 may result in issues with matching historical to modern land allocation
 
+64-bit version of Java
+
+R packages:
+hector v3 or higher
+data.table
+tidyr
+dplyr
+zoo
+
+an empty folder called "data"
+
+carefully check:
+	1) all file paths in run_land_calc.R AND gcam_utils.R
+	2) all output names (ie., scenaro_name at the end of run_land_calc.R)
+	3) input files for correct implementation of land protection;
+pic_hist_base_DB should be used for output without protected lands (protected)
+pic_hist_SSP1_DB should be used for output without protected lands (reference)
+
 
