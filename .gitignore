@@ -6,7 +6,7 @@
 .Rproj.user
 *.RDS
 *.html
-*.XML
+*.xml
 *.png
 *.tiff
 *.csv
