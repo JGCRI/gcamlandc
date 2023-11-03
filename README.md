@@ -36,6 +36,7 @@ may result in issues with matching historical to modern land allocation
 R packages:
 hector v3 or higher
 data.table
+ggplot2
 tidyr
 dplyr
 zoo

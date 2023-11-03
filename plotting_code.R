@@ -1,7 +1,30 @@
-# plotting code. apologies in advance - lots of chaos here
-
+library(dplyr)
 library(ggplot2)
+library(zoo)
 
+#combine outputs from read_in_landcalcs.R
+plot_data_all <- dplyr::bind_rows(ref_plot_data_long,pro_plot_data_long)
+
+#option to export and read this in to save time
+write.csv(plot_data_all, "plot_data_all.csv")
+plot_data_all <- read.csv("plot_data_all.csv")
+
+#TODO bring in climate data separetly from read_in_landcalcs
+#comparison of climate data
+base_climate_data$scenario <- "baseline"
+full_climate_data$scenario <- "fully-coupled"
+all_climate <- dplyr::bind_rows(base_climate_data,full_climate_data)
+
+
+ggplot(data=dplyr::filter(climate_data,year<=2050),aes(x=year,y=value))+
+  geom_line()+
+  facet_wrap(~variable,scales="free_y")+
+  theme_classic() -> fig
+ggsave(filename=paste0("climate_data.png"),plot=fig,width=10,height=6)
+
+
+
+#sample leaf emissions?
 ggplot(data=plot_data_long,aes(x=year,y=value))+
   geom_line()+
   facet_wrap(~variable,scales="free_y")+
@@ -11,77 +34,12 @@ ggplot(data=plot_data_long,aes(x=year,y=value))+
 
 
 
-#to graph the following we'd need to combine
-#reference (baseline) scenario with protected lands scenario
-#rename dataframes and add scenario column as appropriate
-#plot_data_long_base$scenario <- "baseline"
-plot_data_long$scenario <- "protected"
-plot_data_all <- dplyr::bind_rows(plot_data_long,plot_data_long_base)
-
-ggplot(data=filter(plot_data_all,variable %in% c("tot_nbp","agCDensity","bgCDensity")),
-       aes(x=year,y=value,linetype=scenario))+
-  geom_line()+
-  facet_wrap(~variable,scales="free_y")+
-  theme_classic()
-
-ggsave(filename="sample_leaf_emissions.png",plot=fig,width=8,height=8)
-
-
-# process results when they need to be read in
-
-# process full world data
-
-full_bg_emiss <- read.csv("data/bg_emiss_full_world_baseline_no-protected.csv")  # not actually baseline, despite the name
-row.names(full_bg_emiss) <- full_bg_emiss$X
-full_bg_emiss <- dplyr::select(full_bg_emiss,-c("X"))
-full_ag_emiss <- read.csv("data/ag_emiss_full_world_baseline_no-protected.csv")
-row.names(full_ag_emiss) <- full_ag_emiss$X
-full_ag_emiss <- dplyr::select(full_ag_emiss,-c("X"))
-
-full_bg_emiss <- output[["bg_emiss"]]
-full_ag_emiss <- output[["ag_emiss"]]
-
-
-base_bg_emiss <- read.csv("data/bg_emiss_full_world_real-baseline_no-protected_2100.csv")
-row.names(base_bg_emiss) <- base_bg_emiss$X
-base_bg_emiss <- dplyr::select(base_bg_emiss,-c("X"))
-base_ag_emiss <- read.csv("data/ag_emiss_full_world_real-baseline_no-protected_2100.csv")
-row.names(base_ag_emiss) <- base_ag_emiss$X
-base_ag_emiss <- dplyr::select(base_ag_emiss,-c("X"))
-
-#full_leaf_data <- read.csv("data/leaf_data_full_world_coupled_no-protected.csv")
-#full_leaf_params <- read.csv("data/leaf_params_full_world_coupled_no-protected.csv")
-#full_climate_data <- read.csv("data/climate_data_full_world_coupled_no-protected.csv")
-full_leaf_data <- output[["leaf_data"]]
-full_climate <- output[["climate"]]
-
-# combine
-leaf_data %>% #select(-X) %>%
-  left_join(BG_final, by = c("year", "name")) %>%
-  left_join(AG_final, by = c("year", "name")) -> plot_data
-
-base_leaf_data <- read.csv("data/leaf_data_full_world_real-baseline_no-protected_2100.csv")  
-base_leaf_params <- read.csv("data/leaf_params_full_world_real-baseline_no-protected_2100.csv")
-base_climate_data <- read.csv("data/climate_data_full_world_real-baseline_no-protected_2100.csv")
-full_climate_data <- read.csv("data/climate_data_full_world_baseline_no-protected_2100.csv")
-
-base_climate_data$scenario <- "baseline"
-full_climate_data$scenario <- "fully-coupled"
-all_climate <- dplyr::bind_rows(base_climate_data,full_climate_data)
-
-library(dplyr)
-ggplot(data=dplyr::filter(climate_data,year<=2050),aes(x=year,y=value))+
-  geom_line()+
-  facet_wrap(~variable,scales="free_y")+
-  theme_classic() -> fig
-ggsave(filename=paste0("climate_data.png"),plot=fig,width=10,height=6)
-
 
 #For comparing to Global Carbon Project
 gcp_data <- read.csv("C:/Users/morr497/Documents/OneDriveSafeSpace/jgcri/extdata/extdata/nbp_gcp.csv")
 
 gcp_data$scenario <- "Global Carbon Project"
-library(zoo)
+
 gcp_data$nbp <- rollmean(gcp_data$nbp*1000,k=10,fill=NA)
 world_total_gcp <- dplyr::bind_rows(world_totals[world_totals$scenario != "Unmanaged",],gcp_data)
 
