@@ -2,7 +2,7 @@
 library(dplyr)
 
 ###NOTE
-# file paths will need to be changed is new output is generated from run_land_calc.R
+# file paths will need to be changed if new output is generated from run_land_calc.R
 ###
 
 #source this code to create two identical datasets,

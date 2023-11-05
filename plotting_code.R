@@ -9,28 +9,25 @@ library(zoo)
 plot_data_all <- dplyr::bind_rows(ref_plot_data_long,pro_plot_data_long)
 
 #option to export and read this in to save time
-write.csv(plot_data_all, "plot_data_all.csv")
-plot_data_all <- read.csv("plot_data_all.csv")
-
-#working with the full data set can be prohibtively slow
-#below is just the data from North America
-#(Canda, USA, and Mexico)
-
-plot_data_all <- read.csv("NorthAmerica_data_all.csv")
+# write.csv(plot_data_all, "plot_data_all.csv")
+# plot_data_all <- read.csv("plot_data_all.csv")
 
 ################### climate data ######################
 
-#TODO bring in climate data separately from read_in_landcalcs
-#comparison of climate data
-base_climate_data$scenario <- "baseline"
-full_climate_data$scenario <- "fully-coupled"
-all_climate <- dplyr::bind_rows(base_climate_data,full_climate_data)
+#TODO
 
-ggplot(data=dplyr::filter(climate_data,year<=2050),aes(x=year,y=value))+
-  geom_line()+
-  facet_wrap(~variable,scales="free_y")+
-  theme_classic() -> fig
-ggsave(filename=paste0("climate_data.png"),plot=fig,width=10,height=6)
+#not sure if these two categories are still relevant
+#seems that Dawn means "baseline" as in, no coupling with Hector???
+
+# base_climate_data$scenario <- "baseline"
+# full_climate_data$scenario <- "fully-coupled"
+# all_climate <- dplyr::bind_rows(base_climate_data,full_climate_data)
+# 
+# ggplot(data=dplyr::filter(climate_data,year<=2050),aes(x=year,y=value))+
+#   geom_line()+
+#   facet_wrap(~variable,scales="free_y")+
+#   theme_classic() -> fig
+# ggsave(filename=paste0("climate_data.png"),plot=fig,width=10,height=6)
 
 
 ################### Comparison with Global Carbon Project ######################
@@ -127,7 +124,7 @@ ggplot(data=dplyr::filter(raw_world_totals_gcp,year<=2015),
   theme(axis.title = element_text(size=14),
         axis.text = element_text(size=14)) -> fig
 
-ggsave(filename="world_2015_raw.png",plot=fig,width=8,height=3.5)
+ggsave(filename="figures/world_2015_raw.png",plot=fig,width=8,height=3.5)
 
 
 
@@ -159,66 +156,67 @@ ggplot(data=filter(reg_totals,region %in% chunk1),
        aes(x=year,y=nbp,linetype=scenario, color = mgd))+
   geom_point()+ facet_wrap(~region,scales="free_y")+
   theme_classic() -> fig
-ggsave(filename=paste0("regional_data_chunk1.png"),plot=fig,width=10,height=6)
+ggsave(filename=paste0("figures/regional_data_chunk1.png"),plot=fig,width=10,height=6)
 
 ggplot(data=filter(reg_totals,region %in% chunk2),
        aes(x=year,y=nbp,linetype=scenario, color = mgd))+
   geom_point()+ facet_wrap(~region,scales="free_y")+
   theme_classic() -> fig
-ggsave(filename=paste0("regional_data_chunk2.png"),plot=fig,width=10,height=6)
+ggsave(filename=paste0("figures/regional_data_chunk2.png"),plot=fig,width=10,height=6)
 
 ggplot(data=filter(reg_totals,region %in% chunk3),
        aes(x=year,y=nbp,linetype=scenario, color = mgd))+
   geom_point()+ facet_wrap(~region,scales="free_y")+
   theme_classic() -> fig
-ggsave(filename=paste0("regional_data_chunk3.png"),plot=fig,width=10,height=6)
+ggsave(filename=paste0("figures/regional_data_chunk3.png"),plot=fig,width=10,height=6)
 
 ggplot(data=filter(reg_totals,region %in% chunk4),
        aes(x=year,y=nbp,linetype=scenario, color = mgd))+
   geom_point()+ facet_wrap(~region,scales="free_y")+
   theme_classic() -> fig
-ggsave(filename=paste0("regional_data_chunk4.png"),plot=fig,width=10,height=6)
+ggsave(filename=paste0("figures/regional_data_chunk4.png"),plot=fig,width=10,height=6)
 
 
 ################### Ploting with a random subset of landleaves ######################
-
-sample_leaf_names <- sample(plot_data_all$name,500)
-sample_leaf_data <- dplyr::filter(plot_data_all, name %in% sample_leaf_names)
-
-
-sample_nbp <- sample_leaf_data %>% dplyr::filter(variable=="tot_nbp")
-sample_density <- sample_leaf_data %>% dplyr::filter(variable %in% c("agCDensity","bgCDensity"))
-
-sample_ag_emiss <- sample_leaf_data %>% dplyr::filter(variable=="ag_emiss")
-sample_bg_emiss <- sample_leaf_data %>% dplyr::filter(variable=="bg_emiss")
-sample_emiss_data <- bind_rows(sample_ag_emiss, sample_bg_emiss)
-
-ggplot(data=sample_emiss_data,
-       aes(x=year, y=value, linetype=scenario))+
-  geom_line()+
-  ylab("Land Carbon Flux (Mt C/yr)")+
-  xlab("Year")+
-  facet_wrap(~variable,scales="free_y",nrow=4)+
-  theme_classic()#->fig
-#ggsave(filename="sample_leaf_emissions.png",plot=fig,width=10,height=8)
-
-ggplot(data=sample_density,
-       aes(x=year, y=value,linetype=scenario))+
-  geom_line()+
-  ylab("Carbon Density")+
-  xlab("Year")+
-  facet_wrap(~variable,scales="free_y",nrow=4)+
-  theme_classic()#->fig
-#ggsave(filename="sample_leaf_C_density.png",plot=fig,width=10,height=8)
-
-
-ggplot(data=plot_data_long[plot_data_long$variable == "land_alloc",],aes(x=year,y=value)) +#,linetype=scenario))+
-  geom_line()+
-  ylab("Land Allocation")+
-  xlab("Year")+
-  facet_wrap(~name,scales="free_y",nrow=4)+
-  theme_classic() #-> fig
-#ggsave(filename="sample_leaf_land_alloc.png",plot=fig,width=10,height=8)
+# 
+# sample_leaf_names <- sample(plot_data_all$name,500)
+# sample_leaf_data <- dplyr::filter(plot_data_all, name %in% sample_leaf_names)
+# 
+# 
+# sample_nbp <- sample_leaf_data %>% dplyr::filter(variable=="tot_nbp")
+# sample_density <- sample_leaf_data %>% dplyr::filter(variable %in% c("agCDensity","bgCDensity"))
+# 
+# sample_ag_emiss <- sample_leaf_data %>% dplyr::filter(variable=="ag_emiss")
+# sample_bg_emiss <- sample_leaf_data %>% dplyr::filter(variable=="bg_emiss")
+# sample_emiss_data <- bind_rows(sample_ag_emiss, sample_bg_emiss)
+# 
+# ggplot(data=sample_emiss_data,
+#        aes(x=year, y=value, linetype=scenario))+
+#   geom_line()+
+#   ylab("Land Carbon Flux (Mt C/yr)")+
+#   xlab("Year")+
+#   facet_wrap(~variable,scales="free_y",nrow=4)+
+#   theme_classic()#->fig
+# #ggsave(filename="figures/sample_leaf_emissions.png",plot=fig,width=10,height=8)
+# 
+# ggplot(data=sample_density,
+#        aes(x=year, y=value,linetype=scenario))+
+#   geom_line()+
+#   ylab("Carbon Density")+
+#   xlab("Year")+
+#   facet_wrap(~variable,scales="free_y",nrow=4)+
+#   theme_classic()#->fig
+# #ggsave(filename="figures/sample_leaf_C_density.png",plot=fig,width=10,height=8)
+# 
+# 
+# ggplot(sample_leaf_data[sample_leaf_data$variable == "land_alloc",],
+#        aes(x=year,y=value, linetype=scenario))+
+#   geom_line()+
+#   ylab("Land Allocation")+
+#   xlab("Year")+
+#   facet_wrap(~name,scales="free_y",nrow=4)+
+#   theme_classic() #-> fig
+#ggsave(filename="figures/sample_leaf_land_alloc.png",plot=fig,width=10,height=8)
 
 
 ################### Plotting with a single leaf ######################
