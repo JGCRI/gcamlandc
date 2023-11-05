@@ -32,14 +32,6 @@ ggplot(data=dplyr::filter(climate_data,year<=2050),aes(x=year,y=value))+
   theme_classic() -> fig
 ggsave(filename=paste0("climate_data.png"),plot=fig,width=10,height=6)
 
-################### BASIC? ######################
-
-
-
-
-
-
-
 
 ################### Comparison with Global Carbon Project ######################
 
@@ -188,71 +180,37 @@ ggplot(data=filter(reg_totals,region %in% chunk4),
 ggsave(filename=paste0("regional_data_chunk4.png"),plot=fig,width=10,height=6)
 
 
-#sample leaves
+################### Ploting with a random subset of landleaves ######################
 
-#not sure if this works
-# test_leaves <- sample(row.names(AG_emissions),500)
-# grep("Forest",test_leaves,value=TRUE)
+sample_leaf_names <- sample(plot_data_all$name,500)
+sample_leaf_data <- dplyr::filter(plot_data_all, name %in% sample_leaf_names)
 
-sample_leaves <- c("Grassland_NWTerr", "OtherArableLand_LBalkash",
-                   "biomassTree_BrahmaniR_IRR_lo", "FruitsTree_IndCstS_IRR_lo",
-                   "OilCropTree_OrinocoR_RFD_hi", "FodderHerbC4_DanubeR_RFD_lo")
 
-sample_leaf_data <- dplyr::filter(plot_data_long, landleaf %in% sample_leaves)
-
-plot_data_long2 <- sample_leaf_data %>%
-  tidyr::pivot_longer(cols=c("land_alloc","agCDensity","bgCDensity","agCarbon",
-                             "bgCarbon","NPP","Rh","litter","bg_emiss","ag_emiss","tot_nbp"),
-                      names_to="variable",
-                      values_to="value")
-
-sample_emiss_data <- sample_leaf_data[1:6] %>% dplyr::filter(variable=="tot_nbp") %>% select(-c("variable"))
+sample_nbp <- sample_leaf_data %>% dplyr::filter(variable=="tot_nbp")
 sample_density <- sample_leaf_data %>% dplyr::filter(variable %in% c("agCDensity","bgCDensity"))
 
-sample_ag_emiss <- sample_leaf_data %>% dplyr::filter(variable=="ag_emiss") %>% select(-c("variable"))
-sample_bg_emiss <- sample_leaf_data %>% dplyr::filter(variable=="bg_emiss") %>% select(-c("variable"))
+sample_ag_emiss <- sample_leaf_data %>% dplyr::filter(variable=="ag_emiss")
+sample_bg_emiss <- sample_leaf_data %>% dplyr::filter(variable=="bg_emiss")
+sample_emiss_data <- bind_rows(sample_ag_emiss, sample_bg_emiss)
 
-
-ggplot(data=sample_emiss_data,aes(x=year,y=value, linetype=scenario))+
+ggplot(data=sample_emiss_data,
+       aes(x=year, y=value, linetype=scenario))+
   geom_line()+
   ylab("Land Carbon Flux (Mt C/yr)")+
   xlab("Year")+
   facet_wrap(~variable,scales="free_y",nrow=4)+
-  theme_classic()->fig
-ggsave(filename="sample_leaf_emissions.png",plot=fig,width=10,height=8)
+  theme_classic()#->fig
+#ggsave(filename="sample_leaf_emissions.png",plot=fig,width=10,height=8)
 
-
-ggplot(data=sample_ag_emiss,aes(x=year,y=value)) +#,linetype=scenario))+
+ggplot(data=sample_density,
+       aes(x=year, y=value,linetype=scenario))+
   geom_line()+
-  ylab("Aboveground Emissions")+
+  ylab("Carbon Density")+
   xlab("Year")+
-  facet_wrap(~name,scales="free_y",nrow=4)+
-  theme_classic()->fig
-ggsave(filename="sample_leaf_ag_emiss.png",plot=fig,width=10,height=8)
+  facet_wrap(~variable,scales="free_y",nrow=4)+
+  theme_classic()#->fig
+#ggsave(filename="sample_leaf_C_density.png",plot=fig,width=10,height=8)
 
-ggplot(data=sample_density[sample_density$variable == "agCDensity",],aes(x=year,y=value)) +#,linetype=scenario))+
-  geom_line()+
-  ylab("Aboveground Density")+
-  xlab("Year")+
-  facet_wrap(~name,scales="free_y",nrow=4)+
-  theme_classic()->fig
-ggsave(filename="sample_leaf_ag_density.png",plot=fig,width=10,height=8)
-
-ggplot(data=sample_density[sample_density$variable == "bgCDensity",],aes(x=year,y=value)) +#,linetype=scenario))+
-  geom_line()+
-  ylab("Belowground Density")+
-  xlab("Year")+
-  facet_wrap(~name,scales="free_y",nrow=4)+
-  theme_classic()->fig
-ggsave(filename="sample_leaf_bg_density.png",plot=fig,width=10,height=8)
-
-ggplot(data=sample_bg_emiss,aes(x=year,y=value)) +#,linetype=scenario))+
-  geom_line()+
-  ylab("Belowground Emissions")+
-  xlab("Year")+
-  facet_wrap(~name,scales="free_y",nrow=4)+
-  theme_classic()->fig
-ggsave(filename="sample_leaf_bg_emiss.png",plot=fig,width=10,height=8)
 
 ggplot(data=plot_data_long[plot_data_long$variable == "land_alloc",],aes(x=year,y=value)) +#,linetype=scenario))+
   geom_line()+
@@ -262,195 +220,15 @@ ggplot(data=plot_data_long[plot_data_long$variable == "land_alloc",],aes(x=year,
   theme_classic() #-> fig
 #ggsave(filename="sample_leaf_land_alloc.png",plot=fig,width=10,height=8)
 
-ggplot(data=filter(sample_density,name %in% c("China_Grassland_IndusR", "India_Shrubland_BrahmaniR",
-                                              "USA_CornC4_GreatBasin_RFD_hi", "South America_Northern_Wheat_SAmerCstNE_RFD_lo",
-                                              "Russia_Tundra_BalticSea")),
-       aes(x=year,y=value,linetype=scenario))+
-  geom_line(size=1.5)+
-  ylab("Carbon Density")+
-  xlab("Year")+
-  facet_grid(name~variable,scales="free_y")+
-  theme_classic()->fig
-ggsave(filename="sample_leaf_emissions.png",plot=fig,width=10,height=8)
 
+################### Plotting with a single leaf ######################
 
+# Steps through getting data and plotting for a single leaf
+dplyr::filter(plot_data_all, name=="Canada_Grassland_NWTerr") -> debug_leaf
 
-ggplot(data=dplyr::filter(plot_data_long,name==sample_leaves[[2]]),aes(x=year,y=value))+
-  geom_line()+
-  facet_wrap(~variable,scales="free_y")+
-  theme_classic()
-
-ggsave(filename="sample_leaf_emissions.png",plot=fig,width=8,height=8)
-
-
-debug_leaf_long <- debug_leaf %>%
-  tidyr::pivot_longer(cols=c("land_alloc","agCDensity","bgCDensity","agCarbon",
-                             "bgCarbon","NPP","Rh","litter","bg_emiss","ag_emiss","tot_nbp"),
-                      names_to="variable",
-                      values_to="value")
-
-ggplot(data=debug_leaf_long,aes(x=year,y=value))+
-  geom_line()+
-  facet_wrap(~variable,scales="free_y")+
-  theme_classic()
-
-
-
-for (leaf in sample_leaves){
-  ggplot(data=dplyr::filter(plot_data_long,name==leaf),aes(x=year,y=value,linetype=scenario))+
-    geom_line()+
-    facet_wrap(~variable,scales="free_y")+
-    theme_classic() -> fig
-  ggsave(filename=paste0("leaf_plot_",leaf,".png"),plot=fig,width=10,height=6)
-  
-}
-
-
--> fig
-
-ggsave(filename="single_leaf_Africa_Eastern_Soybean_RiftValley_RFD_lo_test.png",plot=fig,width=10,height=6)
-
-
-
-
-
-################### current plots above this line ######################
-
-#plot_data_long <- plot_data_first %>% tidyr::pivot_longer(cols=c("land_alloc","tot_nbp"),names_to="variable",
-#                                                    values_to="value")
-
-
-
-plot_data_long <- plot_data %>% filter(name %in% leaf_set) %>% tidyr::pivot_longer(cols=c("land_alloc","agCDensity","bgCDensity","agCarbon",
-                                                                                          "bgCarbon","NPP","Rh","litter","bg_emiss","ag_emiss","tot_nbp"),names_to="variable",
-                                                                                   values_to="value")
-
-plot_data_long <- debug_leaf %>%
-  tidyr::pivot_longer(cols=c("land_alloc","agCDensity",
-                             "bgCDensity","agCarbon",
-                             "bgCarbon","NPP","Rh",
-                             "litter","bg_emiss",
-                             "ag_emiss","tot_nbp"),
-                      names_to="variable", values_to="value")
-
-ggplot(data=plot_data_long,aes(x=year,y=value))+
-  geom_line()+
-  facet_wrap(variable~name,scales="free_y")+
-  theme_classic()
-
-ggplot(data=us_data,aes(x=year,y=value))+
-  geom_line()+
-  facet_wrap(variable~name,scales="free_y")+
-  theme_classic()
-
-all_leaves <- unique(output[["leaf_data"]]$name)
-
-#leaf_set <- sample(all_leaves,500)
-
-table(grepl('RFD_hi',us_data$name))
-table(grepl('IRR_lo',us_data$name))
-
-patterns <- c("_RFD_hi", "_IRR_lo")
-
-filter(us_data, grepl(paste(patterns, collapse="|")), name) -> short_us_data
-filter(us_data, grepl("Nelson", name)) -> Nelson_data
-
-Nelson_data %>%
-  filter(grepl("Unmanaged", name)) -> um_Nelson
-
-ggplot(data=um_Nelson, aes(x=year,y=value))+
-  geom_line()+
-  facet_wrap(name~variable,scales="free_y")+
-  ggtitle("Nelson River Basin, Unmanaged, Protected") +
-  theme_classic() -> fig
-
-ggsave(filename="NelsonRiver_Unmanaged_Protected.png",plot=fig,width=12,height=8)
-
-ggplot(data=dplyr::filter(plot_data_long,name %in% leaves),aes(x=year,y=value,linetype=scenario))+
-  geom_line()+
-  facet_wrap(name~variable,scales="free_y")+
-  theme_classic()
-
-# select 10 sample land leaves to plot all variables for in 10 separate plots
-ggplot(data=dplyr::filter(plot_data_long,name==leaf_set[[375]],year<=1850),aes(x=year,y=value,linetype=scenario))+
-  geom_line()+
-  facet_wrap(~variable,scales="free_y")+
-  theme_classic()#-> fig
-
-ggsave(filename="single_leaf_Africa_Eastern_Soybean_RiftValley_RFD_lo_test.png",plot=fig,width=10,height=6)
-
-
-# select 6 sample land leaves to plot key variables for: land alloc, agDensity, bgDensity, agEmiss, bgEmiss
-
-ggplot(data=dplyr::filter(plot_data,variable %in% c("land_alloc",
-                                                    "tot_nbp")),
-       aes(x=year,y=value,linetype=scenario))+
-  geom_line()+
-  facet_grid(variable~landleaf,scales="free_y")+
-  theme_classic()
-
-
-# select 6 sample land leaves to plot key variables for: land alloc, agEmiss, bgEmiss, totalEmiss
-
-ggplot(data=dplyr::filter(plot_data,variable %in% c("agCDensity","bgCDensity","land_alloc")),aes(x=year,y=value))+
-  geom_line()+
-  facet_grid(variable~landleaf,scales="free_y")+
-  theme_classic()
-
-
-
-
-
-
-############################################
-
-# *************** TESTING US DATA
-
-# GETTING DEBUG DATA FOR US LEAF
-dplyr::filter(plot_data,name=="Canada_Grassland_NWTerr") -> debug_leaf
-
-dplyr::filter(full_leaf_params,name=="USA_OtherArableLand_UsaPacNW") -> debug_full_leaf_params
-dplyr::filter(base_leaf_params,name=="USA_OtherArableLand_UsaPacNW") -> debug_base_leaf_params
-debug_base_leaf_params
-debug_full_leaf_params
-
-us_data <- dplyr::filter(plot_data_long,region=="USA")
-
-us_data %>%
-  tidyr::pivot_wider(id_cols=c("year","name", #"scenario",
-                               "region","tot_nbp"),
-                     names_from=scenario,
-                     values_from = tot_nbp) %>%
-  mutate(diff=`fully-coupled`-baseline) %>%
-  dplyr::filter(year==1975) -> us_data2
-
-dplyr::filter(us_test,`fully-coupled`>=10)
-
-all_leaves <- unique(us_data$name)
-
-i <- 1
-first_idx <- i*12-11
-curr_leaves <- all_leaves[first_idx:(i*12)]
-#curr_leaves <- all_leaves[first_idx:length(all_leaves)]
-
-curr_leaves <- sample(all_leaves,50)
-
-sample(all_leaves,50)
-
-curr_leaves <- grep("Vegetables", all_leaves,value=TRUE)
-#curr_leaves <- grep("UnmanagedPasture", curr_leaves,value=TRUE,invert=TRUE)
-length(curr_leaves)
-curr_leaves <- curr_leaves[1:16]
-ggplot(data=dplyr::filter(us_data,name %in% curr_leaves),aes(x=year,y=tot_nbp,linetype=scenario))+
-  geom_line()+
-  facet_wrap(~name,scales="free_y")+
-  theme_classic()
-
-test_leaves <- sample(unique(plot_data_long$landleaf), 3)
-
-ggplot(data=dplyr::filter(plot_data_long,name %in% test_leaves),aes(x=year,y=value))+
-  geom_line()+
-  facet_wrap(variable~name,scales="free_y")+
+ggplot(data=debug_leaf,aes(x=year,y=value))+
+  geom_line(aes(color=scenario))+
+  facet_wrap(.~variable,scales="free_y")+
   theme_classic()
 
 
