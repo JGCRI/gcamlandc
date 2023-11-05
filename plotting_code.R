@@ -78,9 +78,9 @@ world_totals_unmgd$mgd <- "unmanaged"
 world_totals <- bind_rows(world_totals_mgd, world_totals_unmgd)
 
 #protected vs reference (aka baseline), managed vs unmnaged
-ggplot(data=world_totals,aes(x=year,y=nbp,color= mgd))+
+ggplot(data=world_totals,aes(x=year,y=nbp,color= mgd))+ #Why is nbp ploted as emissions here?
   geom_point()+
-  ylab("LUC Emissions (Mt C/yr") +
+  ylab("LUC Emissions (Mt C/yr)") +
   facet_grid(mgd~scenario, scales = "free") + 
   theme_classic() -> fig
 
