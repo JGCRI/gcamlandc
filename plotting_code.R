@@ -133,14 +133,59 @@ ggplot(data=dplyr::filter(raw_world_totals_gcp,year<=2015),
   xlab("Year")+
   theme_classic() +
   theme(axis.title = element_text(size=14),
-        axis.text = element_text(size=14)) #-> fig
+        axis.text = element_text(size=14)) -> fig
 
 ggsave(filename="world_2015_raw.png",plot=fig,width=8,height=3.5)
 
 
 
 
+################### Regional Plots ######################
 
+#not sure if it makes sense to have individual and combined scenarios with managed and unmanaged
+#keeping for now just in case
+# reg_totals_unmgd <- reg_totals_unmgd %>% dplyr::filter(scenario=="fully-coupled") %>%
+#   mutate(scenario="Unmanaged")
+# reg_totals_all <- reg_totals %>% dplyr::filter(scenario=="fully-coupled") %>%
+#   mutate(scenario="Unmanaged+Managed")
+# reg_totals_mgd <- reg_totals_mgd %>% dplyr::filter(scenario=="fully-coupled") %>%
+#   mutate(scenario="Managed")
+# reg_totals_base <- reg_totals %>% dplyr::filter(scenario=="baseline") %>%
+#   mutate(scenario="Baseline")
+# reg_totals <- dplyr::bind_rows(reg_totals_base,reg_totals_mgd,reg_totals_all,reg_totals_unmgd)
+
+reg_totals <- bind_rows(reg_totals_mgd, reg_totals_unmgd)
+
+#step through all 32 regions in 4 chunks of 8
+all_regions <- unique(reg_totals$region)
+chunk1 <- all_regions[1:8] 
+chunk2 <- all_regions[9:16]
+chunk3 <- all_regions[17:24]
+chunk4 <- all_regions[25:32]
+
+ggplot(data=filter(reg_totals,region %in% chunk1),
+       aes(x=year,y=nbp,linetype=scenario, color = mgd))+
+  geom_point()+ facet_wrap(~region,scales="free_y")+
+  theme_classic() -> fig
+ggsave(filename=paste0("regional_data_chunk1.png"),plot=fig,width=10,height=6)
+
+ggplot(data=filter(reg_totals,region %in% chunk2),
+       aes(x=year,y=nbp,linetype=scenario, color = mgd))+
+  geom_point()+ facet_wrap(~region,scales="free_y")+
+  theme_classic() -> fig
+ggsave(filename=paste0("regional_data_chunk2.png"),plot=fig,width=10,height=6)
+
+ggplot(data=filter(reg_totals,region %in% chunk3),
+       aes(x=year,y=nbp,linetype=scenario, color = mgd))+
+  geom_point()+ facet_wrap(~region,scales="free_y")+
+  theme_classic() -> fig
+ggsave(filename=paste0("regional_data_chunk3.png"),plot=fig,width=10,height=6)
+
+ggplot(data=filter(reg_totals,region %in% chunk4),
+       aes(x=year,y=nbp,linetype=scenario, color = mgd))+
+  geom_point()+ facet_wrap(~region,scales="free_y")+
+  theme_classic() -> fig
+ggsave(filename=paste0("regional_data_chunk4.png"),plot=fig,width=10,height=6)
 
 
 #sample leaves
@@ -353,46 +398,7 @@ ggplot(data=dplyr::filter(plot_data,variable %in% c("agCDensity","bgCDensity","l
   theme_classic()
 
 
-# aggregate emissions and plot global
 
-# aggregate emissions and plot regional (3 sets of 8?)
-
-
-# plot climate
-
-
-
-reg_totals_unmgd <- reg_totals_unmgd %>% dplyr::filter(scenario=="fully-coupled") %>%
-  mutate(scenario="Unmanaged")
-
-reg_totals_all <- reg_totals %>% dplyr::filter(scenario=="fully-coupled") %>%
-  mutate(scenario="Unmanaged+Managed")
-
-reg_totals_mgd <- reg_totals_mgd %>% dplyr::filter(scenario=="fully-coupled") %>%
-  mutate(scenario="Managed")
-
-reg_totals_base <- reg_totals %>% dplyr::filter(scenario=="baseline") %>%
-  mutate(scenario="Baseline")
-
-reg_totals_compare <- dplyr::bind_rows(reg_totals_base,reg_totals_mgd,reg_totals_all,reg_totals_unmgd)
-
-
-i <- 4
-first_idx <- i*9-8
-#curr_regions <- all_regs[first_idx:(i*9)]
-curr_regions <- all_regs[first_idx:length(all_regs)]
-ggplot(data=filter(reg_totals_compare,region %in% curr_regions),aes(x=year,y=nbp,linetype=scenario))+
-  geom_line()+
-  facet_wrap(~region,scales="free_y")+
-  theme_classic()->fig
-
-ggsave(filename=paste0("regional_data_mgd",i,".png"),plot=fig,width=10,height=6)
-
-
-
-plot_data_emiss %>% group_by(region,scenario, year) %>% summarise(nbp=sum(tot_nbp)) -> reg_totals
-
-plot_data_emiss %>% group_by(scenario, year) %>% summarise(nbp=sum(tot_nbp)) -> world_totals
 
 
 
