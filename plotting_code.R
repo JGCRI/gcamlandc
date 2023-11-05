@@ -1,6 +1,9 @@
 library(dplyr)
 library(ggplot2)
+library(ggsci)
 library(zoo)
+
+################### read-in data if needed ######################
 
 #combine outputs from read_in_landcalcs.R
 plot_data_all <- dplyr::bind_rows(ref_plot_data_long,pro_plot_data_long)
@@ -9,12 +12,19 @@ plot_data_all <- dplyr::bind_rows(ref_plot_data_long,pro_plot_data_long)
 write.csv(plot_data_all, "plot_data_all.csv")
 plot_data_all <- read.csv("plot_data_all.csv")
 
-#TODO bring in climate data separetly from read_in_landcalcs
+#working with the full data set can be prohibtively slow
+#below is just the data from North America
+#(Canda, USA, and Mexico)
+
+plot_data_all <- read.csv("NorthAmerica_data_all.csv")
+
+################### climate data ######################
+
+#TODO bring in climate data separately from read_in_landcalcs
 #comparison of climate data
 base_climate_data$scenario <- "baseline"
 full_climate_data$scenario <- "fully-coupled"
 all_climate <- dplyr::bind_rows(base_climate_data,full_climate_data)
-
 
 ggplot(data=dplyr::filter(climate_data,year<=2050),aes(x=year,y=value))+
   geom_line()+
@@ -22,132 +32,113 @@ ggplot(data=dplyr::filter(climate_data,year<=2050),aes(x=year,y=value))+
   theme_classic() -> fig
 ggsave(filename=paste0("climate_data.png"),plot=fig,width=10,height=6)
 
-
-
-#sample leaf emissions?
-ggplot(data=plot_data_long,aes(x=year,y=value))+
-  geom_line()+
-  facet_wrap(~variable,scales="free_y")+
-  theme_classic()
-
-#ggsave(filename="sample_leaf_emissions.png",plot=fig,width=8,height=8)
+################### BASIC? ######################
 
 
 
 
-#For comparing to Global Carbon Project
-gcp_data <- read.csv("C:/Users/morr497/Documents/OneDriveSafeSpace/jgcri/extdata/extdata/nbp_gcp.csv")
 
+
+
+
+################### Comparison with Global Carbon Project ######################
+
+###NOTE
+#change path if needed
+###
+gcp_data <- read.csv("nbp_gcp.csv")
 gcp_data$scenario <- "Global Carbon Project"
-
+gcp_data$nbp_raw <- gcp_data$nbp*1000
 gcp_data$nbp <- rollmean(gcp_data$nbp*1000,k=10,fill=NA)
-world_total_gcp <- dplyr::bind_rows(world_totals[world_totals$scenario != "Unmanaged",],gcp_data)
 
-world_total_gcp$scenario <- factor(world_total_gcp$scenario,
-                                   levels=c("Global Carbon Project","baseline","fully-coupled"))
+#pull out emissions by land type (managed vs unmanaged)
+plot_data_all %>%
+  select(year, region, name, scenario, variable, value) %>%
+  filter(variable == "tot_nbp") -> for_emissions
 
-#library(ggplot2)
-#library(ggsci)
-ggplot(data=dplyr::filter(world_total_gcp,year<=2015),aes(x=year,y=nbp,colour=scenario))+
+#all leaf names
+all_leaves <- unique(for_emissions$name)
+
+managed_leaves <- grep("Unmanaged|RockIceDesert|Tundra", all_leaves, value=TRUE, invert=TRUE)
+#removes Unmanaged, RockIceDesert, and Tundra
+
+
+unmanaged_leaves <- grep("Unmanaged|RockIceDesert|Tundra", all_leaves, value=TRUE)
+#selects Unmanaged, RockIceDesert, and Tundra
+
+##NOTE
+#Dawn previously had pasture as part of unmanaged,
+#here they are counted as managed land
+
+#for managed leaves, create regional and global nbp data sets
+managed_data <- dplyr::filter(for_emissions,name %in% managed_leaves)
+managed_data %>% group_by(region,scenario, year) %>% summarise(nbp=sum(value)) -> reg_totals_mgd
+#only variable in the dataframe is nbp (see creation of for_emissions)
+reg_totals_mgd$mgd <- "managed"
+managed_data %>% group_by(scenario, year) %>% summarise(nbp=sum(value)) -> world_totals_mgd
+world_totals_mgd$mgd <- "managed"
+
+#same for unmanaged
+unmgd_data <- dplyr::filter(for_emissions,!(name %in% managed_leaves))
+unmgd_data %>% group_by(region,scenario, year) %>% summarise(nbp=sum(value)) -> reg_totals_unmgd
+reg_totals_unmgd$mgd <- "unmanaged"
+unmgd_data %>% group_by(scenario, year) %>% summarise(nbp=sum(value)) -> world_totals_unmgd
+world_totals_unmgd$mgd <- "unmanaged"
+
+#combine for global
+world_totals <- bind_rows(world_totals_mgd, world_totals_unmgd)
+
+#protected vs reference (aka baseline), managed vs unmnaged
+ggplot(data=world_totals,aes(x=year,y=nbp,color= mgd))+
+  geom_point()+
+  ylab("LUC Emissions (Mt C/yr") +
+  facet_grid(mgd~scenario, scales = "free") + 
+  theme_classic() -> fig
+
+ggsave(filename="figures/world_2010_mgd_comp.png", plot=fig, width=10, height=6)
+
+
+#comparison with GCP, unmanaged only
+gcp_data %>%
+  select(year, scenario, nbp) %>%
+  full_join(world_totals[world_totals$mgd!= "unmanaged",]
+  ) -> world_totals_gcp
+
+ggplot(data=dplyr::filter(world_totals_gcp,year<=2015),
+       aes(x=year,y=nbp,colour=scenario))+
   geom_line(size=1.5)+
   scale_color_uchicago()+
-  ylab("Net Biome Production (Mt C/yr") +
+  ylab("Net Biome Production (Mt C/yr)") +
   xlab("Year")+
   theme_classic() +
   theme(axis.title = element_text(size=14),
         axis.text = element_text(size=14)) -> fig
 
-ggsave(filename="world_2015.png",plot=fig,width=8,height=3.5)
+ggsave(filename="figures/world_2015_gcp_comparison.png", plot=fig, width=8, height=3.5)
 
 
-# make raw figure
+#same as comparison with GCP above
+#but with raw GCP nbp
+gcp_data %>%
+  select(year, scenario, nbp_raw) %>%
+  mutate(nbp = nbp_raw) %>%
+  full_join(world_totals[world_totals$mgd!= "unmanaged",]
+  ) -> raw_world_totals_gcp
 
-gcp_data_raw <- gcp_data
-gcp_data_raw$nbp <- gcp_data_raw$nbp*1000
-
-gcp_data_raw$scenario <- "Global Carbon Project"
-world_total_gcp_raw <- dplyr::bind_rows(world_totals[world_totals$scenario != "Unmanaged",],gcp_data_raw)
-
-world_total_gcp_raw$scenario <- factor(world_total_gcp_raw$scenario,
-                                       levels=c("Global Carbon Project","baseline","fully-coupled"))
-
-#library(ggplot2)
-#library(ggsci)
-ggplot(data=dplyr::filter(world_total_gcp_raw,year<=2015),aes(x=year,y=nbp,colour=scenario))+
+ggplot(data=dplyr::filter(raw_world_totals_gcp,year<=2015),
+       aes(x=year,y=nbp,colour=scenario))+
   geom_line(size=1.5)+
   scale_color_uchicago()+
-  ylab("Net Biome Production (Mt C/yr") +
+  ylab("Net Biome Production (Mt C/yr)") +
   xlab("Year")+
   theme_classic() +
   theme(axis.title = element_text(size=14),
-        axis.text = element_text(size=14)) -> fig
+        axis.text = element_text(size=14)) #-> fig
 
 ggsave(filename="world_2015_raw.png",plot=fig,width=8,height=3.5)
 
 
 
-#reg_totals comes from make_maps
-all_regs <- unique(reg_totals$region)
-
-for (i in 1:4){
-  first_idx <- i*9-8
-  curr_regions <- all_regs[first_idx:i*9]
-  ggplot(data=filter(reg_totals,region %in% curr_regions),aes(x=year,y=nbp,linetype=scenario))+
-    geom_line()+
-    facet_wrap(~region,scales="free_y")+
-    theme_classic() -> fig
-  ggsave(filename=paste0("regional_data_",i,".png"),plot=fig,width=10,height=6)
-  
-}
-
-az_data <- filter(plot_data_land,region=="Australia_NZ")
-az_leaves <- unique(az_data$name)
-test_leaves <- sample(az_leaves,30)
-test_leaves <- grep("OtherArable", az_leaves, value=TRUE)
-length(test_leaves)
-#"tot_nbp","agCDensity",
-ggplot(data=filter(az_data,name %in% test_leaves),
-       aes(x=year,y=land_alloc,linetype=scenario))+
-  geom_line()+
-  #facet_grid(name~variable,scales="free_y")+
-  facet_wrap(~name,scales="free_y")+
-  theme_classic()
-
-ggsave(filename="sample_leaf_land.png",plot=fig,width=10,height=10)
-
-
-i <- 1
-first_idx <- i*9-8
-curr_regions <- all_regs[first_idx:(i*9)]
-#curr_regions <- all_regs[first_idx:length(all_regs)]
-ggplot(data=filter(reg_land_totals,region %in% curr_regions),aes(x=year,y=land_alloc,linetype=scenario))+
-  geom_line()+
-  facet_wrap(~region,scales="free_y")+
-  theme_classic() ->fig
-
-ggsave(filename=paste0("regional_land_data_",i,".png"),plot=fig,width=10,height=6)
-
-
-
-i <- 4
-first_idx <- i*9-8
-#curr_regions <- all_regs[first_idx:(i*9)]
-curr_regions <- all_regs[first_idx:length(all_regs)]
-ggplot(data=filter(reg_totals,region %in% curr_regions),aes(x=year,y=nbp,linetype=scenario))+
-  geom_line()+
-  facet_wrap(~region,scales="free_y")+
-  theme_classic()
-
-ggsave(filename=paste0("regional_data_",i,".png"),plot=fig,width=10,height=6)
-
-i <- 4
-first_idx <- i*9-8
-#curr_regions <- all_regs[first_idx:(i*9)]
-curr_regions <- all_regs[first_idx:length(all_regs)]
-ggplot(data=filter(reg_land_totals,region %in% curr_regions),aes(x=year,y=land_alloc,linetype=scenario))+
-  geom_line()+
-  facet_wrap(~region,scales="free_y")+
-  theme_classic()
 
 
 
@@ -370,63 +361,6 @@ ggplot(data=dplyr::filter(plot_data,variable %in% c("agCDensity","bgCDensity","l
 # plot climate
 
 
-############################################# Calculate unmanaged emissions
-
-plot_data_emiss <- select(plot_data,c("year","name","scenario","region", "tot_nbp"))
-
-
-# get managed only
-
-all_leaves <- unique(plot_data_emiss$name) #all leaf names
-mixed_managed_leaves <- grep("Unmanaged", all_leaves, value=TRUE, invert = TRUE) #remove Unmanaged
-managed_leaves <- grep("RockIceDesert|Tundra", mixed_managed_leaves, value=TRUE, invert=TRUE)
-
-mixed_remainder <- grep("Unmanaged", all_leaves, value=TRUE) #select Unmanaged
-remainder_leaves <- grep("RockIceDesert|Tundra", mixed_remainder, value=TRUE, invert = TRUE) #select rock/ice/desert/tundra
-
-
-
-# remaining are all forest, crops, shrubland, grassland, & pasture
-
-
-managed_leaves <- c(managed_leaves,remainder_leaves) # add in all remaining leaves
-
-managed_data <- dplyr::filter(plot_data_emiss,name %in% managed_leaves)
-unmgd_data <- dplyr::filter(plot_data_emiss,!(name %in% managed_leaves))
-
-managed_data %>% group_by(region,scenario, year) %>% summarise(nbp=sum(tot_nbp)) -> reg_totals_mgd
-
-managed_data %>% group_by(scenario, year) %>% summarise(nbp=sum(tot_nbp)) -> world_totals_mgd
-
-unmgd_data %>% group_by(region,scenario, year) %>% summarise(nbp=sum(tot_nbp)) -> reg_totals_unmgd
-
-unmgd_data %>% group_by(scenario, year) %>% summarise(nbp=sum(tot_nbp)) -> world_totals_unmgd
-
-world_totals_unmgd <- world_totals_unmgd %>% dplyr::filter(scenario=="Protected") %>%
-  mutate(scenario="Unmanaged")
-
-world_totals_mgd <- world_totals_mgd %>% dplyr::filter(scenario=="Protected") %>%
-  mutate(scenario="Managed")
-
-world_totals <- bind_rows(world_totals_mgd, world_totals_unmgd)
-
-world_totals_all <- world_totals %>% dplyr::filter(scenario=="Protected") %>%
-  mutate(scenario="Unmanaged+Managed")
-
-world_totals_base <- world_totals %>% dplyr::filter(scenario=="baseline") %>%
-  mutate(scenario="Baseline")
-
-
-world_totals_compare <- dplyr::bind_rows(world_totals_mgd,world_totals_all,world_totals_unmgd)
-#world_totals_compare <- dplyr::bind_rows(world_totals_base,world_totals_mgd,world_totals_all,world_totals_unmgd)
-
-                        #compare
-ggplot(data=world_totals_all,aes(x=year,y=nbp,linetype=scenario))+
-  geom_line()+
-  ylab("LUC Emissions (Mt C/yr") +
-  theme_classic() -> fig
-
-ggsave(filename="world_2010_mgd_comp.png",plot=fig,width=10,height=6)
 
 reg_totals_unmgd <- reg_totals_unmgd %>% dplyr::filter(scenario=="fully-coupled") %>%
   mutate(scenario="Unmanaged")
