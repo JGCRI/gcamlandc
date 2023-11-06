@@ -37,6 +37,7 @@ R packages:
 hector v3 or higher
 data.table
 ggplot2
+ggsci
 tidyr
 dplyr
 zoo
@@ -47,7 +48,7 @@ carefully check:
 	1) all file paths in run_land_calc.R AND gcam_utils.R
 	2) all output names (ie., scenaro_name at the end of run_land_calc.R)
 	3) input files for correct implementation of land protection;
-pic_hist_base_DB should be used for output without protected lands (protected)
-pic_hist_SSP1_DB should be used for output without protected lands (reference)
+a gcam core model database should be used for output with protected lands (protected)
+a gcam database under SSP1 should be used for output without protected lands (reference)
 
 
