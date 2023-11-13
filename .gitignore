@@ -1,0 +1,18 @@
+# OS files
+.DS_Store
+
+# R and RStudio files
+*.Rproj
+.Rproj.user
+*.RDS
+*.html
+*.xml
+*.png
+*.tiff
+*.csv
+*.log
+*.basex
+.RData
+*_cache/*
+*.Rhistory
+*.basex

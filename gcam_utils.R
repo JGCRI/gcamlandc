@@ -1,6 +1,6 @@
 library(dplyr)  # needed for pipelines
 
-read_land_inputs_xml2 <- function(folder="reference", protected){
+read_land_inputs_xml2 <- function(folder, protected){
   
   land1 <- xml2::read_xml(paste0(folder,"/land_input_1.xml"))
   land1_root <- xml2::xml_root(land1)
@@ -131,7 +131,14 @@ process_xml_inputs <- function(land_roots, gcam_land_alloc, nleaves=0, nrows=0){
 
     # TODO for efficiency: run leaves in batches of 250 at a time, then add 250 on to main database and redefine data
     for (leaf in all_leaves){
-      new_leaf_data <- process_leaf(leaf,gcam_land_alloc)  # TODO filter this by leaf earlier so I don't pass whole thing
+      
+      # print('===================================')
+      # print(xml2::xml_attr(leaf,"name"))
+      # print(count+1)
+      # print(i)
+      # print('===================================')
+      
+      new_leaf_data <- process_leaf(leaf,gcam_land_alloc) 
       count <- count+1
       idx <- count+nrows-1
       data <- dplyr::bind_rows(data,new_leaf_data)  # TODO update to rbindlist
@@ -171,7 +178,6 @@ get_region <- function(node,la_str="/LandAllocatorRoot"){
   return(reg_name)
 }
 
-#TODO handle leaves where historical is 0 but modern is not
 parse_c_densities <- function(leaf_data, years){
   above_grnd <- as.numeric(leaf_data$`land-use-history`$`above-ground-carbon-density`)
   below_grnd <- as.numeric(leaf_data$`land-use-history`$`below-ground-carbon-density`)
@@ -183,20 +189,79 @@ parse_c_densities <- function(leaf_data, years){
 }
 
 get_leaf_land_alloc <- function(leaf_node, leaf_name, leaf_region, gcam_land_alloc){
-  leaf_data <- xml2::as_list(leaf_node)  # convert leaf data from xml into something parseable in R
   
-  land_alloc_df <- parse_land_alloc(leaf_data)  # get the historical land allocation data from the xmls
+  # Deal with land allocation info from the xml inputs first:
+  leaf_data <- xml2::as_list(leaf_node)  # convert leaf data from xml into
+                                         # something parseable in R
+  land_alloc_df <- parse_land_alloc(leaf_data)  # get the historical land 
+                                                # allocation data from the xmls
+  # ^ includes if have a leaf with 0 historical land allocation 
+  # (e.g. OtherGrainC4_NelsonR_IRR hi and lo), there are no 1975-2015 
+  # `landAllocation` quantities in the XML - instead of giving NA values in the
+  # parse_land_alloc() function, give values of 0 for these years in this case.
+
   
-  gcam_leaf_land_alloc <- get_gcam_land_alloc_by_leaf(leaf_region=leaf_region, leaf_name=leaf_name, gcam_alloc=gcam_land_alloc)
+  # The land allocation info from the gcam data base:
+  gcam_leaf_land_alloc <- get_gcam_land_alloc_by_leaf(leaf_region=leaf_region, 
+                                                      leaf_name=leaf_name, 
+                                                      gcam_alloc=gcam_land_alloc)
+
+  if(nrow(gcam_leaf_land_alloc) == 0){
+    message(paste('This land leaf', leaf_name, leaf_region, 
+                  '\nexists in the land input xml files but not the gcam output 
+                  \ndatabase land allocation. If land input XML allocation for 
+                  \nhistorical years all 0, then will the this leaf will be 
+                  \nassigned 0 land allocation for all years modeled by GCAM.'))
+  } # we know it exists in the xml because it had to for us to get into this
+    # function. SO far, we have never seen a case where it exists with non-0
+    # allocation in the input XML but somehow isn't present in gcam output db.
+    # that would be a bigger gcam error.
   
-  # find all years of overlap between modeled and historical land alloc and remove from historical
+  # GCAM input XMLs are going to cover 1700-2015 (in very large time steps).
+  # GCAM output data base land allocations cover 1975-2100 (in diff time steps).
+  #
+  # We must merge these together to get 1700-2100:
+  #
+  # First, find all years of overlap between modeled (GCAM_database) and
+  #  historical (GCAM input XML) land alloc and remove from historical
+  
+  # pull off the first model year from the gcam data base
   first_model_year <- gcam_leaf_land_alloc$year[1]
-  idx <- match(first_model_year, land_alloc_df$year)
-  land_alloc_df <- land_alloc_df[1:idx-1,]  # remove any land allocation from the historical that's covered by gcam database output
 
-  land_alloc_all_years <- rbind(land_alloc_df,gcam_leaf_land_alloc)
+  # if doesn't exist in the GCAM data base but does in XML with all 0 historical
+  # (1700-1950) allocation, then Just need to make 0 for all of the years to 2100. 
+  if(is.na(first_model_year) & max(abs(land_alloc_df$value), na.rm = T) == 0){
+    
+    # last year from the xml inputs:
+    max_inputxml_yr <- max(land_alloc_df$year)
+    
+    # based on years other land leafs get in the gcam_land_alloc from the output
+    # DB, make a vector of years after max_inputxml_yr to end of GCAM run (2100)
+    tmp_yrs <- (gcam_land_alloc %>% 
+                  select(year) %>% 
+                  distinct() %>%
+                  filter(year > max_inputxml_yr))$year
+
+    land_alloc_all_years <- rbind(land_alloc_df,
+                                  data.frame(year = tmp_yrs,
+                                             value = 0)) %>% distinct() # makes sure not having years twice.
+    rm(tmp_yrs)
+    
+  }else if (!is.na(first_model_year)){
+
+    # take the model year from the gcamdata base, and  match in to land_alloc_df,
+    # which comes from the XML inputs.
+    idx <- match(first_model_year, land_alloc_df$year)
+    # remove any land allocation from the historical that's covered by gcam
+    # database output:
+    land_alloc_df <- land_alloc_df[1:idx-1,]  
+    
+    land_alloc_all_years <- rbind(land_alloc_df,gcam_leaf_land_alloc)
+  }
+  
+  # clean up row names
   rownames(land_alloc_all_years) <- 1:length(land_alloc_all_years$year)
-
+  
   # interpolate land allocation data - currently linear. Spline was being weird.
   all_years <- seq(min(land_alloc_all_years$year), max(land_alloc_all_years$year), 1)
   land_alloc_interp <- approx(land_alloc_all_years$year,land_alloc_all_years$value, xout=all_years, ties="ordered")
@@ -212,21 +277,22 @@ parse_land_alloc <- function(leaf_data){
   n_hist <- length(hist_listed_alloc)
   year_hist <- numeric(n_hist)
   value_hist <- numeric(n_hist)
-
+  
   for (i in 1:n_hist){
     year_hist[i] <- as.numeric(attributes(hist_listed_alloc[[i]])$year) # this is specific to exact format of current land input xmls
     value_hist[i] <- as.numeric(hist_listed_alloc[[i]][[1]])
   }
   hist_df <- data.frame(year=year_hist, value=value_hist)
   hist_df <- hist_df[order(hist_df$year),]  # population[order(population$age),]
+  
   # get modern land allocation if it exists
   listed_alloc <- leaf_data[names(leaf_data)=='landAllocation']
   n_mdrn <- length(listed_alloc)
-
+  
   mdrn_years <- c(1975, 1990, 2005, 2010, 2015)
-
+  
   mdrn_df <- data.frame(year=mdrn_years,value=NA)
-
+  
   if (n_mdrn!=0){
     for (i in 1:n_mdrn){
       data_year <- as.numeric(attributes(listed_alloc[[i]])$year) # this is specific to exact format of current land input xmls
@@ -235,10 +301,12 @@ parse_land_alloc <- function(leaf_data){
         mdrn_df[mdrn_df$year==data_year,] <- c(data_year,data_value)
       }
     }
+  } else if (max(abs(hist_df$value)) <1e-6 & n_mdrn==0){
+    mdrn_df <- data.frame(year=mdrn_years,value=0)
   }
   hist_df <- hist_df[1:(length(hist_df$year)-1),]  # remove 1975 overlap
   return(data.frame(year=c(hist_df$year,mdrn_df$year),value=c(hist_df$value,mdrn_df$value)))
-
+  
 }
 
 
@@ -257,19 +325,19 @@ get_leaf_params <- function(land_roots, soilTimeScales, land_alloc_data, data_na
     leaf_params <- data.table::rbindlist(list(leaf_params,tmp))
   }
   head(leaf_params)
-
+  
   leaf_params <- dplyr::mutate(leaf_params,agCarbon0=0.0,bgCarbon0=0.0,npp_factor=0.0,NPP0=0.0, co20=0.0)
   leaf_params <- dplyr::left_join(leaf_params,soilTimeScales,by="region")
-
+  
   dplyr::filter(land_alloc_data,year==1700) %>% dplyr::mutate(land0=land_alloc) %>% dplyr::select(-c("year","land_alloc")) -> land0_df
   leaf_params <- dplyr::left_join(leaf_params,land0_df,by=c("region","landleaf"))
-
+  
   for (col in colnames(leaf_params)[3:10]){
     leaf_params[[col]] <- as.numeric(leaf_params[[col]])
   }
   leaf_params$`above-ground-carbon-density` <- 0.2*leaf_params$`below-ground-carbon-density`
   leaf_params$name <- paste(leaf_params$region, leaf_params$landleaf, sep="_")
-
+  
   # store leaf_data so it's easily accessible
   saveRDS(leaf_params,file="data/leaf_params.RDS")
   return(leaf_params)
@@ -279,7 +347,7 @@ get_leaf_params <- function(land_roots, soilTimeScales, land_alloc_data, data_na
 get_data_byLeaf2 <- function(root_node, data_names){
   data <- data.frame(matrix(ncol=2+length(data_names),nrow=0))
   colnames(data) <- c("region","landleaf",data_names)
-
+  
   all_regions <- xml2::xml_find_all(root_node,"//region")
   for (region in all_regions){
     reg_name <- xml2::xml_attr(region,"name")
@@ -316,7 +384,7 @@ get_data_byLeaf2 <- function(root_node, data_names){
 get_data_byLeaf <- function(root_node, data_names){
   data <- data.frame(matrix(ncol=2+length(data_names),nrow=0))
   colnames(data) <- c("region","landleaf",data_names)
-
+  
   all_regions <- xml2::xml_find_all(root_node,"//region")
   for (region in all_regions){
     reg_name <- xml2::xml_attr(region,"name")
@@ -344,7 +412,7 @@ get_data_byLeaf <- function(root_node, data_names){
         colnames(tmp_data) <- c("region","landleaf",data_names)
         count <- 0
       }
-
+      
     }
   }
   names(data) <- c("region","landleaf",data_names)
@@ -355,7 +423,7 @@ get_data_byLeaf <- function(root_node, data_names){
 get_soilTS_byRegion <- function(root_node){
   data <- data.frame(matrix(ncol=2,nrow=0))
   colnames(data) <- c("region","soilTimeScale")
-
+  
   all_regions <- xml2::xml_find_all(root_node,"//region")
   for (region in all_regions){
     reg_name <- xml2::xml_attr(region,"name")
@@ -368,27 +436,29 @@ get_soilTS_byRegion <- function(root_node){
   return(data)
 }
 
-get_gcam_land_alloc <- function(db_name="database_basexdb", gcam_dir="reference", scenario="Reference", read_from_file=FALSE, filename="data/gcam_land_alloc.csv"){
-
+#ATTENTION
+###File paths here!
+get_gcam_land_alloc <- function(db_name="database_basexdbGCAM", gcam_dir="pic_data/pic_hist_base_DB/", scenario="Reference", read_from_file=FALSE, filename="data/gcam_land_alloc.csv"){
+  
   if (read_from_file) {
     gcam_land_alloc <- read.csv2(file=filename,header=TRUE)
   }
   else {
     base_conn <- rgcam::localDBConn(gcam_dir, db_name)
-
+    
     land_alloc_query <- '<query title="detailed land allocation">
     <axis1 name="LandLeaf">LandLeaf[@name]</axis1>
     <axis2 name="Year">land-allocation[@year]</axis2>
     <xPath group="false" sumAll="false" buildList="true" dataName="LandLeaf">/LandNode[@name=\'root\' or @type=\'LandNode\' (:collapse:)]//land-allocation/text()</xPath>
     <comments/>
 </query>'
-
+    
     new.proj <- rgcam::addSingleQuery(base_conn, "new.proj", "Land Allocation", land_alloc_query, c(scenario), clobber=TRUE)
-
+    
     gcam_land_alloc <- rgcam::getQuery(new.proj, "Land Allocation")
     write.csv2(gcam_land_alloc, file=filename, row.names = FALSE)
   }
-
+  
   return(gcam_land_alloc)
 }
 
@@ -398,6 +468,9 @@ get_gcam_land_alloc_by_leaf <- function(leaf_region, leaf_name, gcam_alloc){
   return(leaf_land_alloc)
 }
 
+#ATTENTION
+###File paths here!
+#creates an empty project
 get_gcam_emissions <- function(db_name="database_basexdb", gcam_dir="reference"){
   base_conn <- localDBConn(gcam_dir, db_name)
   luc_query <- '<query title="Land Use Change Emission">
@@ -406,64 +479,10 @@ get_gcam_emissions <- function(db_name="database_basexdb", gcam_dir="reference")
          <xPath buildList="true" dataName="land-use-change-emission" group="false" sumAll="true">/LandNode[@name=\'root\' or @type=\'LandNode\' (: collapse :)]//land-use-change-emission/text()</xPath>
          <comments/>
       </query>'
-
+#TODO can this be deleted?  
   new.proj <- addSingleQuery(base_conn, "new.proj", "Land Use Change Emissions", luc_query, c("Reference"), clobber=TRUE)
-
+  
   gcam_luc <- getQuery(new.proj, "Land Use Change Emissions")
   return(gcam_luc)
 }
 
-
-# TODO figure out better place to put this
-read_luc_data <- function() {
-  gcp_hist <- read.csv("~/Dropbox/Research/gcam_projects/LUC/data/gcp_historical.csv", header=TRUE, skip=14)
-  gcp_mdrn <- read.csv("~/Dropbox/Research/gcam_projects/LUC/data/gcp_modern.csv",header=TRUE, skip=27)
-  gcp_hist <- gcp_hist[101:nrow(gcp_hist),1:7]
-  gcp_hist <- as_tibble(gcp_hist)
-  gcp_mdrn <- as_tibble(gcp_mdrn)
-  names(gcp_hist) <- c("year", "fossil", "luc", "atm", "ocean", "land", "imbalance")
-
-  houghton_regions <- read.csv("~/Dropbox/Research/gcam_projects/LUC/data/houghton_regions.csv")
-
-  nc <- nc_open("~/Dropbox/Research/gcam_projects/LUC/data/Gasser_et_al_2020_best_guess.nc")
-  v4 <- nc$var[[4]]
-  gasser_yr <- v4$dim[[5]]$vals
-  gasser <- ncvar_get(nc,v4)
-
-  varsize <- v4$varsize
-  ndims   <- v4$ndims
-  nt      <- varsize[ndims]  # Remember timelike dim is always the LAST dimension!
-
-  gasser_keys <- c("Unknown"=0, "Sub-Saharan Africa"=1, "Latin America"=2,  "South and Southeast Asia"=3,
-                   "North America"=4, "Europe"=5, "Former USSR"=6, "China"=7,
-                   "North Africa and the Middle East"=8, "East Asia"=9,  "Oceania"=10)
-
-  gcam_gasser <- list("Sub-Saharan Africa"=c("South Africa", "Africa_Eastern", "Africa_Southern", "Africa_Western"),
-                      "Latin America"=c("Argentina", "Brazil", "Columbia", "Mexico", "South America_Northern", "South America_Southern", "Central America and the Caribbean"),
-                      "South and Southeast Asia" = c("Pakistan", "India", "Indonesia", "South Asia", "Southeast Asia"),
-                      "North America" = c("Canada", "USA"),
-                      "Europe"= c("EU-12", "EU-15", "Europe Free Trade Association", "Europe Non-EU"),
-                      "Former USSR" = c("Russia", "Europe Eastern", "Central Asia"),
-                      "China" = c("China"),
-                      "North Africa and the Middle East" = c("Middle East", "Africa_Northern"),
-                      "East Asia" = c("Japan", "South Korea"),
-                      "Oceania" = c("Australia_NZ"))
-
-  gasser_luc <- rep(0,nt)
-  for (i in 1:nt){
-    gasser_luc[i] <- sum(gasser[,,,,i])
-  }
-
-  gasser_luc_reg <- array(0L,c(11,nt))
-
-  for (i in 1:10){
-    for (j in 1:nt){
-      gasser_luc_reg[i,j] <- sum(gasser[,,,i,j])
-    }
-  }
-
-  gasser_df <- tibble(luc = gasser_luc, year=gasser_yr)
-
-  return(list("gasser"=gasser_df, "houghton"=houghton_regions, "gcp_hist"=gcp_hist, "gcp_mdrn"=gcp_mdrn, "gasser_reg"=gasser_luc_reg))
-
-}
