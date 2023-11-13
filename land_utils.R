@@ -4,6 +4,7 @@ library(hector)
 
 getLitter <- function(prevC, currLand, land0){
   f_det <- 0.035
+  #flux of detritus aka litter C; 3.5% of aboveground litter becomes belowground C
   #f_det <- 0.1  # this is for if we isolate NPP to above ground
   if (land0 == 0.0){
     litter <- 0.0
@@ -16,6 +17,8 @@ getNPP <- function(idx, NPP0, startYear, currCO2, co20, currLand, Land0, betaEff
 
   if (betaEff){
     beta <- 0.15  # TODO make this an input
+    #HECTOR-speak for CO2 fertilization
+    #Check beta value in current HECTOR, may be 36
   } else {
     beta <- 0  # turns off CO2 fertilization effect
   }
@@ -45,8 +48,8 @@ getTairMean <- function(lag, year, climate_data){
 getRh <- function(idx, prevBelowC, climate_data, rhEff, currLand, land0){
 
   # TODO make these parameters inputs
-  f_rhs <- 0.02
-  q10 <- 2.0
+  f_rhs <- 0.02 #fraction of soil C which is respired annually (residence time of 50 yrs, ie., 1/50)
+  q10 <- 2.0 #HECTOR's value for temperature sensititvity
   if (rhEff){
     T_rm <- climate_data[idx,]$tairMean
   } else {
@@ -62,7 +65,8 @@ getRh <- function(idx, prevBelowC, climate_data, rhEff, currLand, land0){
 # should we do this as values or set property of landleaf for NPP, cDensity
 getCDensityAbove <- function(idx, NPP, litter, prevDensityAbove, landArea, prevCAbove,aboveC0, lucAG){
   if (is_equal(landArea,0.0)) { return(prevDensityAbove) }
-  f_agnpp <- 0.35
+  f_agnpp <- 0.35 #35% of fixed C is above ground (Hector's Fnv)
+  #This should sum to 1 with f_bgnpp below
   #f_agnpp <- 1.0
   currDensityAbove <- prevDensityAbove + (f_agnpp*NPP - litter)/landArea
 
@@ -73,7 +77,7 @@ getCDensityBelow <- function(idx, NPP, Rh, litter, prevDensityBelow, landArea, p
 
   if (is_equal(landArea,0.0)) { return(prevDensityBelow) }
 
-  f_bgnpp <- 0.65
+  f_bgnpp <- 0.65 #65% of fixed C is below ground (Hector's Fvd and Fvs, combined)
   #f_bgnpp <- 0.0
   currDensityBelow <- prevDensityBelow + (f_bgnpp*NPP + litter - Rh)/landArea
 
@@ -211,17 +215,16 @@ initialize_data <- function(land_alloc, params, year0, leaf_data, climate_data, 
   leaf_data0 <- leaf_data[year=={{year0}},]
   land_alloc0 <- land_alloc[year=={{year0}},]
 
-  #matching carbon density and mature age data from protected leaves to their unprotected
-  #counterparts, which have no values in xmls
+  #in protected lands xmls, the protected version has density and mature age data,
+  #but the unprotected twin does not
+  #this is to save data processing time when running GCAM (we think)
+  #here we match landleaves to fill in these blanks
   params %>%
-    mutate(#protected = grepl("Protected", params$landleaf),
-           landleaf_temp = gsub("Protected", "", landleaf)) %>%
+    mutate(landleaf_temp = gsub("Protected", "", landleaf)) %>%
     group_by(region, landleaf_temp) %>%
     fill(`above-ground-carbon-density`,
          `below-ground-carbon-density`,
          `mature-age`) %>%
-    # mutate(prefix = if_else(protected == TRUE, "Protected", "")) %>%
-    # unite(landleaf, prefix, landleaf, sep = "") %>%
     select(-landleaf_temp) %>%
     ungroup() %>%
     # TODO: when params comes in there are some duplicated rows, 
@@ -322,6 +325,7 @@ run_all_years <- function(land_alloc, params, ini_file, last_year=2100, stop_yea
   climate_data[1,(1:4) := list(year0,currTair,currCO2,currTair)]
 
   # probably don't need anymore. was part of an effort to do pre-determined indices
+  # TODO rainy day programming check, delete and see what happens!
   data.table::setindex(land_alloc, NULL)
   data.table::setindex(leaf_data, NULL)
   data.table::setindex(climate_data, NULL)
@@ -434,7 +438,8 @@ is_equal <- function(value, compare_value){
 calc_sigmoid_curve <- function(carbon_diff, init_year, start_year, end_year, mature_age, emissions_vector){
   prev_sigmoid <- 0
   for (year in seq(start_year, end_year, 1)){
-    idx <- year-init_year  # this doesn't seem right...
+    idx <- year-init_year  # this should put the new emissions starting at the appropriate year
+    #ie., when they deviate from what GCAM was doing before
     curr_sigmoid <- calc_sigmoid_diff(year-start_year, mature_age)
     emissions_vector[idx] <- emissions_vector[idx] + (curr_sigmoid-prev_sigmoid) * carbon_diff
     prev_sigmoid <- curr_sigmoid
