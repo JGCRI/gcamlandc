@@ -16,7 +16,7 @@ getLitter <- function(prevC, currLand, land0){
 getNPP <- function(idx, NPP0, startYear, currCO2, co20, currLand, Land0, betaEff){
 
   if (betaEff){
-    beta <- 0.15  # TODO make this an input
+    beta <- 0.36  # TODO make this an input
     #HECTOR-speak for CO2 fertilization
     #Check beta value in current HECTOR, may be 36
   } else {
@@ -88,11 +88,15 @@ get_npp_factor <- function(belowGroundCDensity){
   npp_factor <- 0.02*belowGroundCDensity
 }
 
+# GCAM-core above ground LUC emissions function: https://github.com/JGCRI/gcam-core/blob/912f1b00086be6c18224e2777f1b4bf1c8a1dc5d/cvs/objects/ccarbon_model/source/asimple_carbon_calc.cpp#L194
 calc_above_ground_luc_emissions <- function(prevC, prevLand, currLand, prevCDensity, currCDensity, year, startYear, endYear, matureAge, aboveGroundEmissions){
 
   idx <- year - startYear
 
-  cDiff <- prevCDensity*prevLand-currCDensity*currLand  # this is an update from previous GCAM. Was density*(prevLand-currLand)
+  cDiff <- prevCDensity*prevLand-currCDensity*currLand  
+  # this is an update from previous GCAM. Was density*(prevLand-currLand)
+  # https://github.com/JGCRI/gcam-core/blob/912f1b00086be6c18224e2777f1b4bf1c8a1dc5d/cvs/objects/ccarbon_model/source/asimple_carbon_calc.cpp#L239
+  
 
   if (is_equal(cDiff,0.0)){
   } else if (cDiff < 0 && matureAge > 1 ) {
@@ -112,6 +116,7 @@ calc_above_ground_luc_emissions <- function(prevC, prevLand, currLand, prevCDens
   return(aboveGroundEmissions)
 }
 
+# GCAM-core below ground LUC emissions function: https://github.com/JGCRI/gcam-core/blob/912f1b00086be6c18224e2777f1b4bf1c8a1dc5d/cvs/objects/ccarbon_model/source/asimple_carbon_calc.cpp#L273
 calc_below_ground_luc_emissions <- function(cDiff, year, startYear, endYear, soilTimeScale, belowGroundEmissions){
 
   idx <- year-startYear
