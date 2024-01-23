@@ -92,22 +92,66 @@ get_npp_factor <- function(belowGroundCDensity){
 calc_above_ground_luc_emissions <- function(prevC, prevLand, currLand, prevCDensity, currCDensity, year, startYear, endYear, matureAge, aboveGroundEmissions){
 
   idx <- year - startYear
-
+  
+  # Condition for tracking if LUC emissions have occured 
   cDiff <- prevCDensity*prevLand-currCDensity*currLand  
   # this is an update from previous GCAM. Was density*(prevLand-currLand)
   # https://github.com/JGCRI/gcam-core/blob/912f1b00086be6c18224e2777f1b4bf1c8a1dc5d/cvs/objects/ccarbon_model/source/asimple_carbon_calc.cpp#L239
+  # We use both the current and previous C densities to track if luc emissions have occured
   
 
-  if (is_equal(cDiff,0.0)){
-  } else if (cDiff < 0 && matureAge > 1 ) {
+  if (is_equal(cDiff,0.0)){ # if no emissions occur
+    # do nothing
+  } else if (cDiff < 0 && matureAge > 1 ) { # if carbon was sequestered AND it's a forest
+    # matureAge>1 means Forest related leaves
+    # https://github.com/JGCRI/gcam-core/blob/912f1b00086be6c18224e2777f1b4bf1c8a1dc5d/cvs/objects/ccarbon_model/source/asimple_carbon_calc.cpp#L211
+    # If carbon content increases, then carbon was sequestered.
+    # Carbon sequestration is stretched out in time, based on mMatureAge, because some
+    # land cover types (notably forests) don't mature instantly.
     aboveGroundEmissions <- calc_sigmoid_curve(cDiff, startYear, year, endYear, matureAge, aboveGroundEmissions)
-  } else if ( is_equal(prevLand,0.0) ){
-    aboveGroundEmissions[idx] <- aboveGroundEmissions[idx] - currLand*prevCDensity
-  } else {
+    
+  } else if ( is_equal(prevLand,0.0) ){ 
+    # https://github.com/JGCRI/gcam-core/blob/912f1b00086be6c18224e2777f1b4bf1c8a1dc5d/cvs/objects/ccarbon_model/source/asimple_carbon_calc.cpp#L217
+    # Forest and Non-Forest leaves - getting an initial above ground emissions 
+    
+    # If this land category didn't exist before, and now it does,
+    # then the calculation below will generate a NaN.  Avoid that
+    # by taking the appropriate limit here.
+    aboveGroundEmissions[idx] <- aboveGroundEmissions[idx] - currLand*currCDensity
 
-    aboveGroundEmissions[idx] <- aboveGroundEmissions[idx] + (prevC/prevLand)*(prevLand-currLand)
-
+    
+  } else { 
+    # https://github.com/JGCRI/gcam-core/blob/912f1b00086be6c18224e2777f1b4bf1c8a1dc5d/cvs/objects/ccarbon_model/source/asimple_carbon_calc.cpp#L229
+    # If carbon content decreases, then emissions have occurred.
+    # Compute the carbon emission as the carbon stock pro rata to
+    # the fraction of land converted.
+    
+    # If the mature age is just one year then sequestration
+    # (negative emission) can just be added here as well (so we
+    # don't have a separate branch for it).  (It's not obvious,
+    # but you can show that the formula below just reduces to the
+    # expression for carbonDiff at the top of the function.)
+    
+    # get an initial amount of emissions for forest and land leaves
+    aboveGroundEmissions[idx] <- aboveGroundEmissions[idx] + (prevC/prevLand)*(prevLand) -  currCDensity * currLand
+    # ^ the adjustment is essentially our CDiff, but because forest leaves have weird GCAM-ism, use the 
+    # averageCDensity = prevC/prevLand rather than the prevCDensity itself. 
+    # For non-Forest Leaves, prevC/prevLand == prevCDensity
+    
     if (matureAge > 1) {
+      # And then if it was a forest leaf, that initial emission needs adjustment
+      # https://github.com/JGCRI/gcam-core/blob/912f1b00086be6c18224e2777f1b4bf1c8a1dc5d/cvs/objects/ccarbon_model/source/asimple_carbon_calc.cpp#L246
+      # Back out the pending future sequestration for the land
+      # that has been converted (i.e., that sequestration will
+      # no longer happen).  This calculation is necessarily
+      # approximate because we don't know how long the
+      # destroyed vegetation has been growing.  We do know that
+      # when the vegetation is fully mature,
+      # carbonStock/LandArea == carbonDensity, so the
+      # difference between those two quantities tells us how
+      # much pending sequestration we have.  Distribute the
+      # correction as a sigmoid between aYear and aEndYear.
+      
       cFutureAdjust <- (prevLand - currLand) * (prevCDensity - (prevC/prevLand))
 
       aboveGroundEmissions <- calc_sigmoid_curve(cFutureAdjust, startYear, year, endYear, matureAge, aboveGroundEmissions)
@@ -177,8 +221,10 @@ calc_annual_leaf_luc <- function(climate_data, agEmissions, bgEmissions, prev_da
     currBGDensity <- prev_data$bgCDensity
   }
 
+  #{ this block of code doesn't get used anywhere else
   landDiff <- prev_data$land_alloc - currLand
   aboveCDiff <- prev_data$land_alloc*prev_data$agCDensity - currLand*currAGDensity
+  #}
   belowCDiff <- prev_data$land_alloc*prev_data$bgCDensity - currLand*currBGDensity
 
   agEmissions <- calc_above_ground_luc_emissions(prevC=prev_data$agCarbon,
@@ -356,7 +402,7 @@ run_all_years <- function(land_alloc, params, ini_file, last_year=2100, stop_yea
   for (yr in years[2:length(years)]){
     print(yr)
 
-    prev_yr_data <- leaf_data[leaf_data$year=={{yr}}-1,]
+    prev_yr_data <- leaf_data[leaf_data$year=={{yr}}-1,] # gets updated at the end of each time step yr ~L427
     curr_land_all_leaves <- land_alloc[land_alloc$year=={{yr}},]
 
     leaf_idx <- 1
@@ -382,7 +428,7 @@ run_all_years <- function(land_alloc, params, ini_file, last_year=2100, stop_yea
         leaf_params <- reg_params[which(reg_params$landleaf=={{leaf}}),]
         
         
-        # get emissions vectors
+        # get emissions vectors - shaped and labeled but full of 0s
         agEmissions <- ag_emiss_data[paste0(leaf_region,"_",leaf),]
         bgEmissions <- bg_emiss_data[paste0(leaf_region,"_",leaf),]
 
@@ -408,8 +454,8 @@ run_all_years <- function(land_alloc, params, ini_file, last_year=2100, stop_yea
         data_idx <- data_idx + 1
         leaf_idx <- leaf_idx+1
         reg_leaf_idx <- reg_leaf_idx+1
-      }
-    }
+      } # end loop over each leaf in the region
+    } # end loop over all regions
 
     luc_tot <- sum(ag_emiss_data[,outer_yr_idx]) + sum(bg_emiss_data[,outer_yr_idx])
 
@@ -427,7 +473,9 @@ run_all_years <- function(land_alloc, params, ini_file, last_year=2100, stop_yea
     outer_yr_idx <- outer_yr_idx+1
     climate_data[outer_yr_idx,(1:4) := list(yr,currTair,currCO2,annualTairMean)]
 
-  }
+  } # end loop over each year
+  
+  
   climate_output <-fetchvars(core,dates=years[1:length(years)-1],vars=c(GLOBAL_TAS(),CONCENTRATIONS_CO2(),
                                                                         NBP_CONSTRAIN(),OCEAN_UPTAKE()))
   return(list("climate"=climate_output,"leaf_data"=leaf_data, "ag_emiss"=ag_emiss_data, "bg_emiss"=bg_emiss_data, "params"=params))
