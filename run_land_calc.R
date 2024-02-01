@@ -94,10 +94,16 @@ ini_file <- system.file(scenario_file, package="hector")
 outer_land_alloc2 <- data.table::setDT(outer_land_alloc2)
 outer_params2 <- data.table::setDT(outer_params2)
 
+# This is the model running
 output <- run_all_years(outer_land_alloc2, outer_params2, ini_file,
                         stop_year=stop_year, last_year=last_year,
                         rhEff=rhEff, betaEff=betaEff,
                         cCycling=ccycling, coupled=coupled)
+# run_all_years() does a lot of initialization, shaping, set up, 
+# then calls calc_annual_leaf_luc() (land_utils.R approx L389).
+# calc_annual_leaf_luc() calculates above ground and below ground emissions
+# and returns them as separate entries in a list. (land_utils.R approx L184-205).
+# 
 
 scenario_name <- "full_world_protected_PIC_DB_2100"
 write.csv(output[["leaf_data"]],file=paste0("data/leaf_data_",scenario_name,".csv"))
