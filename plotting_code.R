@@ -77,7 +77,7 @@ world_totals_unmgd$mgd <- "unmanaged"
 #combine for global
 world_totals <- bind_rows(world_totals_mgd, world_totals_unmgd)
 
-#protected vs reference (aka baseline), managed vs unmanaged
+#protected vs reference (aka baseline), managed vs unmnaged
 ggplot(data=world_totals,aes(x=year,y=nbp,color= mgd))+ #Why is nbp ploted as emissions here?
   geom_point()+
   ylab("LUC Emissions (Mt C/yr)") +
@@ -164,11 +164,10 @@ ggplot(data=filter(reg_totals,region %in% chunk2),
   theme_classic() -> fig
 ggsave(filename=paste0("figures/regional_data_chunk2.png"),plot=fig,width=10,height=6)
 
-#update all chunks to this style
-  ggplot(data=filter(reg_totals,region %in% chunk3),
-         aes(x=year,y=nbp,linetype=scenario, color = region))+
-    geom_point()+ facet_wrap(mgd~scenario,scales="free_y")+
-    theme_classic() -> fig
+ggplot(data=filter(reg_totals,region %in% chunk3),
+       aes(x=year,y=nbp,linetype=scenario, color = mgd))+
+  geom_point()+ facet_wrap(~region,scales="free_y")+
+  theme_classic() -> fig
 ggsave(filename=paste0("figures/regional_data_chunk3.png"),plot=fig,width=10,height=6)
 
 ggplot(data=filter(reg_totals,region %in% chunk4),
