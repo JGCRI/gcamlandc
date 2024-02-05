@@ -48,7 +48,7 @@ getRh <- function(idx, prevBelowC, climate_data, rhEff, currLand, land0){
 
   # TODO make these parameters inputs
   f_rhs <- 0.02 #fraction of soil C which is respired annually (residence time of 50 yrs, ie., 1/50)
-  q10 <- 2.0 #HECTOR's value for temperature sensititvity
+  q10 <- 2.2 #HECTOR's value for temperature sensitivity
   if (rhEff){
     T_rm <- climate_data[idx,]$tairMean
   } else {

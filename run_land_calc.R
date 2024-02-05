@@ -16,10 +16,10 @@ year0 <- 1745
 last_year <- 2100  # the year to have carbon emissions vectors go through
 stop_year <- 2010  # the year to actually stop calculations
 
-ccycling= TRUE  # if TRUE, turns on carbon density calculations at each time step. If FALSE, code uses fixed densities
-rhEff= TRUE  # if TRUE, enables Q10 feedback with temperature (affects soil respiration)
-betaEff= TRUE  # if TRUE, enables CO2 fertilization feedback (affects NPP)
-coupled= TRUE  # this refers to coupling with Hector. If true, then NBP_constraint is set each year for Hector
+ccycling= FALSE  # if TRUE, turns on carbon density calculations at each time step. If FALSE, code uses fixed densities
+rhEff= FALSE # if TRUE, enables Q10 feedback with temperature (affects soil respiration)
+betaEff= FALSE  # if TRUE, enables CO2 fertilization feedback (affects NPP)
+coupled= FALSE  # this refers to coupling with Hector. If true, then NBP_constraint is set each year for Hector
 
 
 # Load in leaf data:
@@ -105,7 +105,7 @@ output <- run_all_years(outer_land_alloc2, outer_params2, ini_file,
 # and returns them as separate entries in a list. (land_utils.R approx L184-205).
 # 
 
-scenario_name <- "full_world_protected_PIC_DB_2100"
+scenario_name <- "Uncoupled_pro_newBeta_newQ10"
 write.csv(output[["leaf_data"]],file=paste0("data/leaf_data_",scenario_name,".csv"))
 write.csv(output[["params"]],file=paste0("data/leaf_params_",scenario_name,".csv"))
 write.csv(output[["climate"]],file=paste0("data/climate_data_",scenario_name,".csv"))
