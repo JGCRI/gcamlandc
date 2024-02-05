@@ -16,9 +16,8 @@ getLitter <- function(prevC, currLand, land0){
 getNPP <- function(idx, NPP0, startYear, currCO2, co20, currLand, Land0, betaEff){
 
   if (betaEff){
-    beta <- 0.36  # TODO make this an input
+    beta <- 0.55  # TODO make this an input
     #HECTOR-speak for CO2 fertilization
-    #Check beta value in current HECTOR, may be 36
   } else {
     beta <- 0  # turns off CO2 fertilization effect
   }
