@@ -7,6 +7,7 @@
 *.RDS
 *.html
 *.xml
+*.zip
 *.png
 *.tiff
 *.csv
