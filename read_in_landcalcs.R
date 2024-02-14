@@ -15,12 +15,12 @@ year0 <- 1745
 last_year <- 2100 
 
 #reference data (protected = FALSE)
-ref_AG_emissions <- read.csv("Nov23_data_reference/ag_emiss_full_world_reference_PIC_DB_2100.csv", row.names = 1)
-ref_BG_emissions <- read.csv("Nov23_data_reference/bg_emiss_full_world_reference_PIC_DB_2100.csv", row.names = 1)
-ref_climate_data <- read.csv("Nov23_data_reference/climate_data_full_world_reference_PIC_DB_2100.csv")
-#ref_gcam_land <- read.csv("Nov23_data_reference/gcam_land_alloc.csv") #skipping for now until regenerated
-ref_leaf_data <- read.csv("Nov23_data_reference/leaf_data_full_world_reference_PIC_DB_2100.csv")
-ref_leaf_params <- read.csv("Nov23_data_reference/leaf_params_full_world_reference_PIC_DB_2100.csv")
+ref_AG_emissions <- read.csv("Feb24_set5of5/ag_emiss_Coupled_no_newBeta_newQ10.csv", row.names = 1)
+ref_BG_emissions <- read.csv("Feb24_set5of5/bg_emiss_Coupled_no_newBeta_newQ10.csv", row.names = 1)
+ref_climate_data <- read.csv("Feb24_set5of5/climate_data_Coupled_no_newBeta_newQ10.csv")
+ref_gcam_land <- read.csv("Feb24_set5of5/gcam_land_alloc.csv")
+ref_leaf_data <- read.csv("Feb24_set5of5/leaf_data_Coupled_no_newBeta_newQ10.csv.csv")
+ref_leaf_params <- read.csv("Feb24_set5of5/leaf_params_Coupled_no_newBeta_newQ10.csv")
 
 # transform bg emissions to format able to be joined with other leaf data
 ref_BG <- data.frame(t(ref_BG_emissions))
@@ -59,12 +59,12 @@ ref_plot_data_long$scenario <- "baseline"
 
 
 #protected data (protected = TRUE)
-pro_AG_emissions <- read.csv("Nov23_data_protected/ag_emiss_full_world_protected_PIC_DB_2100.csv", row.names = 1)
-pro_BG_emissions <- read.csv("Nov23_data_protected/bg_emiss_full_world_protected_PIC_DB_2100.csv", row.names = 1)
-pro_climate_data <- read.csv("Nov23_data_protected/climate_data_full_world_protected_PIC_DB_2100.csv")
-pro_gcam_land <- read.csv("Nov23_data_protected/gcam_land_alloc.csv")
-pro_leaf_data <- read.csv("Nov23_data_protected/leaf_data_full_world_protected_PIC_DB_2100.csv")
-pro_leaf_params <- read.csv("Nov23_data_protected/leaf_params_full_world_protected_PIC_DB_2100.csv")
+pro_AG_emissions <- read.csv("Feb24_set3of5/ag_emiss_Coupled_pro_newBeta_newQ10.csv", row.names = 1)
+pro_BG_emissions <- read.csv("Feb24_set3of5/bg_emiss_Coupled_pro_newBeta_newQ10.csv", row.names = 1)
+pro_climate_data <- read.csv("Feb24_set3of5/climate_data_Coupled_pro_newBeta_newQ10.csv")
+pro_gcam_land <- read.csv("Feb24_set3of5/gcam_land_alloc.csv")
+pro_leaf_data <- read.csv("Feb24_set3of5/leaf_data_Coupled_pro_newBeta_newQ10.csv")
+pro_leaf_params <- read.csv("Feb24_set3of5/leaf_params_Coupled_pro_newBeta_newQ10.csv")
 
 # transform bg emissions to format able to be joined with other leaf data
 pro_BG <- data.frame(t(pro_BG_emissions))
