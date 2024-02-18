@@ -19,15 +19,22 @@ plot_data_all <- dplyr::bind_rows(ref_plot_data_long,pro_plot_data_long)
 #not sure if these two categories are still relevant
 #seems that Dawn means "baseline" as in, no coupling with Hector???
 
+ref_climate_data$scenario <- "baseline"
+pro_climate_data$scenario <- "protected"
+
+ref_climate_data %>%
+  bind_rows(pro_climate_data) %>%
+  select(-X) -> climate_data
+
 # base_climate_data$scenario <- "baseline"
 # full_climate_data$scenario <- "fully-coupled"
 # all_climate <- dplyr::bind_rows(base_climate_data,full_climate_data)
-# 
-# ggplot(data=dplyr::filter(climate_data,year<=2050),aes(x=year,y=value))+
-#   geom_line()+
-#   facet_wrap(~variable,scales="free_y")+
-#   theme_classic() -> fig
-# ggsave(filename=paste0("climate_data.png"),plot=fig,width=10,height=6)
+
+ggplot(data=dplyr::filter(climate_data,year<=2050),aes(x=year,y=value))+
+  geom_line()+
+  facet_grid(scenario ~ variable, scales="free_y")+
+  theme_classic() -> fig
+ggsave(filename=paste0("climate_data.png"),plot=fig,width=10,height=6)
 
 
 ################### Comparison with Global Carbon Project ######################
@@ -42,7 +49,7 @@ gcp_data$nbp <- rollmean(gcp_data$nbp*1000,k=10,fill=NA)
 
 #pull out emissions by land type (managed vs unmanaged)
 plot_data_all %>%
-  select(year, region, name, scenario, variable, value) %>%
+  select(year, region, landleaf, name, scenario, variable, value) %>%
   filter(variable == "tot_nbp") -> for_emissions
 
 #all leaf names
@@ -77,10 +84,10 @@ world_totals_unmgd$mgd <- "unmanaged"
 #combine for global
 world_totals <- bind_rows(world_totals_mgd, world_totals_unmgd)
 
-#protected vs reference (aka baseline), managed vs unmnaged
-ggplot(data=world_totals,aes(x=year,y=nbp,color= mgd))+ #Why is nbp ploted as emissions here?
+#protected vs reference (aka baseline), managed vs unmanaged
+ggplot(data=world_totals,aes(x=year,y=nbp,color= mgd)) +
   geom_point()+
-  ylab("LUC Emissions (Mt C/yr)") +
+  ylab("Net Biome Production (Mt C/yr)") +
   facet_grid(mgd~scenario, scales = "free") + 
   theme_classic() -> fig
 
@@ -90,8 +97,7 @@ ggsave(filename="figures/world_2010_mgd_comp.png", plot=fig, width=10, height=6)
 #comparison with GCP, unmanaged only
 gcp_data %>%
   select(year, scenario, nbp) %>%
-  full_join(world_totals[world_totals$mgd!= "unmanaged",]
-  ) -> world_totals_gcp
+  full_join(world_totals[world_totals$mgd!= "unmanaged",]) -> world_totals_gcp
 
 ggplot(data=dplyr::filter(world_totals_gcp,year<=2015),
        aes(x=year,y=nbp,colour=scenario))+
@@ -152,9 +158,10 @@ chunk2 <- all_regions[9:16]
 chunk3 <- all_regions[17:24]
 chunk4 <- all_regions[25:32]
 
-ggplot(data=filter(reg_totals,region %in% chunk1),
-       aes(x=year,y=nbp,linetype=scenario, color = mgd))+
-  geom_point()+ facet_wrap(~region,scales="free_y")+
+ggplot(data=filter(reg_totals,region %in% chunk1,
+                   year < 1955 & year > 1945),
+       aes(x=year,y=nbp, color = mgd))+
+  geom_point(aes(shape=scenario, size=2))+ facet_wrap(.~region,scales="free_y")+
   theme_classic() -> fig
 ggsave(filename=paste0("figures/regional_data_chunk1.png"),plot=fig,width=10,height=6)
 
