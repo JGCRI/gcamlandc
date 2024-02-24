@@ -3,13 +3,13 @@ library(tidyr)
 library(dplyr)
 library(ggplot2)
 
-all_regions <- unique(plot_data_all$region)
-chunk1 <- all_regions[1:8]
-chunk1_data <- plot_data_all %>%
-  filter(region %in% chunk1)
-
-write.csv(chunk1_data, "chunk1_data.csv")
-#chunk1_data <- read.csv("chunk1_data.csv")
+# all_regions <- unique(plot_data_all$region)
+# chunk1 <- all_regions[1:8]
+# chunk1_data <- plot_data_all %>%
+#   filter(region %in% chunk1)
+# 
+# write.csv(chunk1_data, "chunk1_data.csv")
+chunk1_data <- read.csv("chunk1_data.csv")
 
 
 
@@ -111,10 +111,10 @@ for_emissions %>% group_by(scenario, year) %>%
 world_totals <- bind_rows(world_totals_mgd, world_totals_unmgd)
 
 world_totals %>%
-  filter(scenario == "protected") %>%
+  filter(scenario == "coupled") %>%
   mutate(scenario = mgd) -> world_totals
 
-test <- bind_rows(world_totals, world_totals_scenario)
+combined <- bind_rows(world_totals, world_totals_scenario)
 
 
 unmgd_data %>%
@@ -133,7 +133,7 @@ ggplot(data=chunk1_land_alloc[chunk1_land_alloc$region == "Africa_Eastern",],
   facet_grid(.~scenario, scales = "free") + 
   theme_classic()
 
-test$nbp <- rollmean(test$nbp,k=10,fill=NA)
+combined$nbp <- rollmean(combined$nbp,k=10,fill=NA)
 
 gcp_data %>%
   select(year, scenario, nbp_raw) %>%
@@ -141,7 +141,7 @@ gcp_data %>%
   full_join(test) -> world_totals_gcp
 
 
-#protected vs reference (aka baseline), managed vs unmanaged
+#coupled vs uncoupled (aka baseline), managed vs unmanaged
 ggplot(data= world_totals_gcp,aes(x=year,y=nbp,color= scenario)) +
   geom_line(size=1.5)+
   scale_color_uchicago()+
@@ -151,4 +151,33 @@ ggplot(data= world_totals_gcp,aes(x=year,y=nbp,color= scenario)) +
   theme(axis.title = element_text(size=14),
         axis.text = element_text(size=14)) -> fig
 
-ggsave(filename="figures/test3.png", plot=fig, width=10, height=6)
+ggsave(filename="figures/c_vs_uc_test3.png", plot=fig, width=10, height=6)
+
+# gcam <- read.csv("luc_queries.csv")
+# 
+# gcam_long <- gcam %>%
+#   group_by(scenario, region, LandLeaf) %>%
+#   pivot_longer(cols = c(X1980:X2100)) %>%
+#   mutate(year = as.numeric(str_replace_all(name, "X", ""))) %>%
+#   select(-X, -name)
+# 
+# gcam_long[gcam_long$scenario == "Reference",]$scenario <- "GCAMv6_baseline"
+# gcam_long[gcam_long$scenario ==  "Protected_Lands",]$scenario <- "GCAMv6_protected"
+
+# gcam_long %>% group_by(scenario, year) %>%
+#   summarise(nbp=sum(value)) -> gcam_scenarios
+# 
+# all_scenarios <- bind_rows(world_totals_gcp, gcam_scenarios)
+# 
+# #protected vs reference (aka baseline), managed vs unmanaged
+# ggplot(data= all_scenarios[all_scenarios$year <= 2010,],
+#        aes(x=year,y=nbp,color= scenario)) +
+#   geom_line(size=1.5)+
+#   scale_color_uchicago()+
+#   ylab("Net Biome Production (Mt C/yr)") +
+#   xlab("Year")+
+#   theme_classic() +
+#   theme(axis.title = element_text(size=14),
+#         axis.text = element_text(size=14)) -> fig
+# 
+# ggsave(filename="figures/test4.png", plot=fig, width=10, height=6)
