@@ -19,8 +19,8 @@ plot_data_all <- dplyr::bind_rows(ref_plot_data_long,pro_plot_data_long)
 #not sure if these two categories are still relevant
 #seems that Dawn means "baseline" as in, no coupling with Hector???
 
-ref_climate_data$scenario <- "baseline"
-pro_climate_data$scenario <- "protected"
+ref_climate_data$scenario <- "uncoupled"
+pro_climate_data$scenario <- "coupled"
 
 ref_climate_data %>%
   bind_rows(pro_climate_data) %>%
@@ -34,7 +34,7 @@ ggplot(data=dplyr::filter(climate_data,year<=2050),aes(x=year,y=value))+
   geom_line()+
   facet_grid(scenario ~ variable, scales="free_y")+
   theme_classic() -> fig
-ggsave(filename=paste0("climate_data.png"),plot=fig,width=10,height=6)
+ggsave(filename=paste0("coupled_vs_un_climate_data.png"),plot=fig,width=10,height=6)
 
 
 ################### Comparison with Global Carbon Project ######################
@@ -91,7 +91,7 @@ ggplot(data=world_totals,aes(x=year,y=nbp,color= mgd)) +
   facet_grid(mgd~scenario, scales = "free") + 
   theme_classic() -> fig
 
-ggsave(filename="figures/world_2010_mgd_comp.png", plot=fig, width=10, height=6)
+ggsave(filename="figures/coupled_vs_un_world_2010_mgd_comp.png", plot=fig, width=10, height=6)
 
 
 #comparison with GCP, unmanaged only
@@ -109,7 +109,7 @@ ggplot(data=dplyr::filter(world_totals_gcp,year<=2015),
   theme(axis.title = element_text(size=14),
         axis.text = element_text(size=14)) -> fig
 
-ggsave(filename="figures/world_2015_gcp_comparison.png", plot=fig, width=8, height=3.5)
+ggsave(filename="figures/coupled_vs_un_world_2015_gcp_comparison.png", plot=fig, width=8, height=3.5)
 
 
 #same as comparison with GCP above
@@ -130,7 +130,7 @@ ggplot(data=dplyr::filter(raw_world_totals_gcp,year<=2015),
   theme(axis.title = element_text(size=14),
         axis.text = element_text(size=14)) -> fig
 
-ggsave(filename="figures/world_2015_raw.png",plot=fig,width=8,height=3.5)
+ggsave(filename="figures/coupled_vs_un_world_2015_raw.png",plot=fig,width=8,height=3.5)
 
 
 
