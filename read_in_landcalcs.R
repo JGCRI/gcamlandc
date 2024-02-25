@@ -17,7 +17,7 @@ last_year <- 2100
 #reference data (protected = TRUE, spatially resolved = TRUE, coupled = FALSE)
 ref_AG_emissions <- read.csv("Feb24_set2of5/ag_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
 ref_BG_emissions <- read.csv("Feb24_set2of5/bg_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
-ref_climate_data <- read.csv("Feb24_set2of5/climate_data_UnCoupled_pro_newBeta_newQ10.csv")
+ref_climate_data <- read.csv("Feb24_set2of5/climate_data_Uncoupled_pro_newBeta_newQ10.csv")
 ref_gcam_land <- read.csv("Feb24_set2of5/gcam_land_alloc.csv")
 ref_leaf_data <- read.csv("Feb24_set2of5/leaf_data_Uncoupled_pro_newBeta_newQ10.csv")
 ref_leaf_params <- read.csv("Feb24_set2of5/leaf_params_Uncoupled_pro_newBeta_newQ10.csv")

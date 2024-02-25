@@ -46,6 +46,8 @@ gcp_data <- read.csv("nbp_gcp.csv")
 gcp_data$scenario <- "Global Carbon Project"
 gcp_data$nbp_raw <- gcp_data$nbp*1000
 gcp_data$nbp <- rollmean(gcp_data$nbp*1000,k=10,fill=NA)
+#may be needed if the csv does not read in correctly
+gcp_data$year <- gcp_data[,1]
 
 #pull out emissions by land type (managed vs unmanaged)
 plot_data_all %>%
