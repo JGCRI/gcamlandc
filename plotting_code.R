@@ -42,7 +42,9 @@ plot_data_all %>%
   # simulates global NPP and Rh and combines the 3 processes to get NBP.
   # In the coupled run, all three of these processes are occuring at the land 
   # leaf level, so it is a true NBP (or at least more true than for the uncoupled).
-  mutate(scenario = if_else(scenario == 'uncoupled', 'uncoupled_ElucOnly', scenario))   -> 
+  mutate(scenario = if_else(scenario == 'uncoupled',
+                            '2. uncoupled_luc_noNPP_noRh',
+                            '3. coupled_luc_NPP_Rh'))   -> 
   for_emissions
 rm(plot_data_all)
 
@@ -138,7 +140,9 @@ ggsave(filename="figures/coupled_vs_un_world_2010_mgd_comp2.png", plot=fig2, wid
 
 
 
-################### Comparison with Global Carbon Project ######################
+################### Comparison with Global Carbon Project 1 of 2 ###############
+# Assuming that GCP total land flux is ONLY looking at managed land leaves for 
+# both S_land and E_luc
 
 # load the file passed from Dawn
 gcp_data_dawn <- read.csv("GCP_data/nbp_gcp.csv")
@@ -166,7 +170,7 @@ print("Difference to Dawn's file:")
 print(max(abs(gcp_data$nbp-gcp_data_dawn$nbp)))
 
 # Label data and convert units
-gcp_data$scenario <- "Global Carbon Project"
+gcp_data$scenario <- "1. Global Carbon Project"
 gcp_data$nbp_raw <- gcp_data$nbp*1000
 gcp_data$nbp <- rollmean(gcp_data$nbp*1000,k=10,fill=NA)
 
@@ -191,8 +195,6 @@ ggsave(filename="figures/coupled_vs_un_world_2015_gcp_comparison_mgd_leaves.png"
        plot=fig,
        width=8, height=3.5)
 
-
-break
 #same as comparison with GCP above
 #but with raw GCP nbp
 gcp_data %>%
@@ -215,8 +217,50 @@ ggplot(data=dplyr::filter(raw_world_totals_gcp,year<=2015),
 ggsave(filename="figures/coupled_vs_un_world_2015_raw_mgd.png",plot=fig,width=8,height=3.5)
 
 
+################### Comparison with Global Carbon Project 2 of 2 ###############
+# Assuming that GCP total land flux includes S_land on both managed and 
+# unmanaged leaves, and E_Luc is only from managed leaves
 
+# acs note -  THINK this is how Dawn made their plot.
+# much more consistent with their pattern, if you consider that our coupled
+# run should be more of a sink because our beta is MUCH higher compared to the
+# value of 0.15 (or 0.36) that we think DW ran with.
+# 
+# The uncoupled result _should_ be pretty similar to DW `baseline`.
+# did make some changes, including to reading in protected lands. But pretty close
 
+# clip the world totals values on the GCAM period years:
+gcam_years <- c(1800, 1850, 1900, 1950, 1975, 1990, 2005, 2010, 2015)
+
+#comparison with GCP
+gcp_data %>%
+  select(year, scenario, nbp) %>%
+  full_join(world_totals %>% 
+              group_by (scenario, year) %>% 
+              summarize(nbp = sum(nbp)) %>%
+              ungroup %>%
+              filter(!(year %in% gcam_years))) ->
+  world_totals_gcp2
+
+ggplot(data=dplyr::filter(world_totals_gcp2,year<=2015),
+       aes(x=year,y=nbp,colour=scenario, group = scenario))+
+  geom_line(size=1.5)+
+  scale_color_uchicago()+
+  ylab("Net Biome Production (Mt C/yr) - world total vs GCP - all leaves") +
+  xlab("Year")+
+  theme_classic() +
+  theme(axis.title = element_text(size=14),
+        axis.text = element_text(size=14)) -> 
+  fig2
+
+ggsave(filename="figures/coupled_vs_un_world_2015_gcp_comparison_all_leaves.png", 
+       plot=fig2,
+       width=8, height=3.5)
+
+ggsave(filename="figures/coupled_vs_un_world_2015_gcp_comparison_all_leaves_clip_y_compare_DW.png", 
+       plot=fig2+ylim(-2000, 1200),
+       width=8, height=3.5)
+break
 ################### Regional Plots ######################
 
 #not sure if it makes sense to have individual and combined scenarios with managed and unmanaged
