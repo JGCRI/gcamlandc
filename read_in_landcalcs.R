@@ -17,12 +17,13 @@ year0 <- 1745
 last_year <- 2100
 
 #reference data (protected = TRUE, spatially resolved = TRUE, coupled = FALSE)
-ref_AG_emissions <- read.csv("Feb24_set2of5/ag_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
-ref_BG_emissions <- read.csv("Feb24_set2of5/bg_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
+# ref_AG_emissions <- read.csv("Feb24_set2of5/ag_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
+# ref_BG_emissions <- read.csv("Feb24_set2of5/bg_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
 # ref_climate_data <- read.csv("Feb24_set2of5/climate_data_UnCoupled_pro_newBeta_newQ10.csv")
 # ref_gcam_land <- read.csv("Feb24_set2of5/gcam_land_alloc.csv")
-ref_leaf_data <- read.csv("Feb24_set2of5/leaf_data_Uncoupled_pro_newBeta_newQ10.csv")
+# ref_leaf_data <- read.csv("Feb24_set2of5/leaf_data_Uncoupled_pro_newBeta_newQ10.csv")
 # ref_leaf_params <- read.csv("Feb24_set2of5/leaf_params_Uncoupled_pro_newBeta_newQ10.csv")
+
 
 # transform bg emissions to format able to be joined with other leaf data
 ref_BG <- data.frame(t(ref_BG_emissions))
@@ -73,7 +74,7 @@ rm(ref_plot_data)
 write.csv(ref_plot_data_long, paste0(write_dir, "ref_plot_data_long.csv"), row.names = FALSE)
 rm(ref_plot_data_long)
 
-#protected data (protected = TRUE)
+#fully coupled data (protected = TRUE,  spatially resolved = TRUE, coupled = TRUE)
 pro_AG_emissions <- read.csv("Feb24_set3of5/ag_emiss_Coupled_pro_newBeta_newQ10.csv", row.names = 1)
 pro_BG_emissions <- read.csv("Feb24_set3of5/bg_emiss_Coupled_pro_newBeta_newQ10.csv", row.names = 1)
 # pro_climate_data <- read.csv("Feb24_set3of5/climate_data_Coupled_pro_newBeta_newQ10.csv")

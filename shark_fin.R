@@ -110,11 +110,11 @@ for_emissions %>% group_by(scenario, year) %>%
 #combine for global
 world_totals <- bind_rows(world_totals_mgd, world_totals_unmgd)
 
-world_totals %>%
-  filter(scenario == "coupled") %>%
-  mutate(scenario = mgd) -> world_totals
+# world_totals %>%
+#   filter(scenario == "coupled") %>%
+#   mutate(scenario = mgd) -> world_totals
 
-combined <- bind_rows(world_totals, world_totals_scenario)
+#combined <- bind_rows(world_totals, world_totals_scenario)
 
 
 unmgd_data %>%
@@ -133,12 +133,12 @@ ggplot(data=chunk1_land_alloc[chunk1_land_alloc$region == "Africa_Eastern",],
   facet_grid(.~scenario, scales = "free") + 
   theme_classic()
 
-combined$nbp <- rollmean(combined$nbp,k=10,fill=NA)
+world_totals_scenario$nbp <- rollmean(world_totals_scenario$nbp,k=10,fill=NA)
 
 gcp_data %>%
   select(year, scenario, nbp_raw) %>%
   mutate(nbp = nbp_raw) %>%
-  full_join(test) -> world_totals_gcp
+  full_join(world_totals_scenario) -> world_totals_gcp
 
 
 #coupled vs uncoupled (aka baseline), managed vs unmanaged
@@ -151,7 +151,7 @@ ggplot(data= world_totals_gcp,aes(x=year,y=nbp,color= scenario)) +
   theme(axis.title = element_text(size=14),
         axis.text = element_text(size=14)) -> fig
 
-ggsave(filename="figures/c_vs_uc_test3.png", plot=fig, width=10, height=6)
+ggsave(filename="figures/c_vs_uc_test4.png", plot=fig, width=10, height=6)
 
 # gcam <- read.csv("luc_queries.csv")
 # 
