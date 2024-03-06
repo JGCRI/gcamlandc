@@ -110,9 +110,9 @@ for_emissions %>% group_by(scenario, year) %>%
 #combine for global
 world_totals <- bind_rows(world_totals_mgd, world_totals_unmgd)
 
-world_totals %>%
-  filter(scenario == "coupled") %>%
-  mutate(scenario = mgd) -> world_totals
+# world_totals %>%
+#   filter(scenario == "coupled") %>%
+#   mutate(scenario = mgd) -> world_totals
 
 #combined <- bind_rows(world_totals, world_totals_scenario)
 
@@ -151,7 +151,7 @@ ggplot(data= world_totals_gcp,aes(x=year,y=nbp,color= scenario)) +
   theme(axis.title = element_text(size=14),
         axis.text = element_text(size=14)) -> fig
 
-ggsave(filename="figures/c_vs_uc_test3.png", plot=fig, width=10, height=6)
+ggsave(filename="figures/c_vs_uc_test4.png", plot=fig, width=10, height=6)
 
 # gcam <- read.csv("luc_queries.csv")
 # 
