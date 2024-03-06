@@ -32,7 +32,7 @@ plot_data_all <- read.csv(paste0(data_dir, 'all_tot_nbp.csv'),
 ################### Plotting ######################
 
 
-#pull out emissions by land type (managed vs unmanaged)
+# Reshape data a bit
 plot_data_all %>%
   select(year, region, landleaf, name, scenario, variable, value) %>%
   # Clarify that the uncoupled model's "nbp" is actually just the 
@@ -41,11 +41,12 @@ plot_data_all %>%
   # in a full GCAM run, this land use change emission passes to hector, which
   # simulates global NPP and Rh and combines the 3 processes to get NBP.
   # In the coupled run, all three of these processes are occuring at the land 
-  # leaf level, so it is a true NBP.
+  # leaf level, so it is a true NBP (or at least more true than for the uncoupled).
   mutate(scenario = if_else(scenario == 'uncoupled', 'uncoupled_ElucOnly', scenario))   -> 
   for_emissions
 rm(plot_data_all)
 
+# pull out emissions by land type (managed vs unmanaged):
 #all leaf names
 all_leaves <- unique(for_emissions$name)
 
@@ -66,7 +67,8 @@ static_leaves <- grep("Urban|RockIceDesert|Tundra", all_leaves, value=TRUE)
 #Dawn previously had pasture as part of unmanaged,
 #here they are counted as managed land
 
-#for managed leaves, create regional and global nbp data sets
+#for managed leaves, create regional (comparing to gasser) and 
+# global(comparing to GCP) nbp data sets
 managed_data <- dplyr::filter(for_emissions,name %in% managed_leaves)
 
 managed_data %>%
@@ -74,7 +76,6 @@ managed_data %>%
   summarise(nbp=sum(value)) %>%
   ungroup -> 
   reg_totals_mgd
-#only variable in the dataframe is nbp (see creation of for_emissions)
 reg_totals_mgd$mgd <- "managed"
 
 managed_data %>% 
@@ -102,7 +103,6 @@ unmgd_data %>%
 world_totals_unmgd$mgd <- "unmanaged"
 
 
-
 # process static leaves similarly
 # note that this includes leaves from both managed and unmanaged
 for_emissions %>%
@@ -113,8 +113,9 @@ for_emissions %>%
   mutate(mgd = 'static') ->
   world_totals_static
 
-#combine for global
-world_totals <- bind_rows(world_totals_static, 
+# combine the managed and unmanaged leaves for global
+# Right now, ignore static. Just there for reference if needed.
+world_totals <- bind_rows(# world_totals_static, 
                           world_totals_mgd, world_totals_unmgd)
 
 
@@ -139,37 +140,32 @@ ggsave(filename="figures/coupled_vs_un_world_2010_mgd_comp2.png", plot=fig2, wid
 
 ################### Comparison with Global Carbon Project ######################
 
-###NOTE
-#change path if needed
-###
-#  gcp_data <- read.csv("nbp_gcp.csv")
-break
-rm(gcp_data)
-read.csv('GCB_2022v1p0_historical_co2_tab.csv', stringsAsFactors = F) %>%
+# load the file passed from Dawn
+gcp_data_dawn <- read.csv("GCP_data/nbp_gcp.csv")
+
+# Load the file pulled directly from GCP:
+read.csv('GCP_data/Global_Carbon_Budget_2022v1p0_historical_co2_tab.csv', stringsAsFactors = F) %>%
   select(year=Year, e_luc=land.use.change.emissions, s_land = land.sink, Units) %>%
+  tidyr::replace_na(list(e_luc=0)) %>%
+  # If we want to sum e_luc + s_land, uncomment from the `gather` to `ungroup` 
+  # calls here and comment out the `mutate`:
   # gather(reporting_id, value, -year, -Units) %>%
   # group_by(year, Units) %>%
-  # summarize(nbp = -sum(value)) %>%
-  # ungroup ->
+  # summarize(nbp = -sum(value, na.rm=T)) %>%
+  # ungroup %>%
+  # Following slide 56 of GCP_data/papers/GCP_CarbonBudget_2023_slides_v1.0-2-Alissa-Haward.pdf
   mutate(nbp = -(s_land - e_luc)) ->
   gcp_data
+# note that for both in the above, we have to take the negative for the flux to be 
+# going in the same direction as the offline model's
 
 
-# gcp_data <- read.csv("GCB2023_ELUC_plotdata_C.csv") 
-# gcp_data %>%
-#   filter(Country == 'World') %>%
-#   select(Year, 
-#          Mean_deforestation,
-#          Mean_forest.regrowth,
-#          Mean_wood.harvest,
-#          Mean_GFED4_peat) %>%
-#   gather(label, value, -Year) %>%
-#   group_by(Year) %>%
-#   summarize(nbp = sum(value)) %>% #MT C/yr
-#   ungroup %>%
-#   rename(year = Year) -> 
-#   gcp_data 
+# Check if nbp = -(s_land-e_luc) from the raw GCP download agrees
+# with file from Dawn:
+print("Difference to Dawn's file:")
+print(max(abs(gcp_data$nbp-gcp_data_dawn$nbp)))
 
+# Label data and convert units
 gcp_data$scenario <- "Global Carbon Project"
 gcp_data$nbp_raw <- gcp_data$nbp*1000
 gcp_data$nbp <- rollmean(gcp_data$nbp*1000,k=10,fill=NA)
@@ -177,7 +173,8 @@ gcp_data$nbp <- rollmean(gcp_data$nbp*1000,k=10,fill=NA)
 #comparison with GCP
 gcp_data %>%
   select(year, scenario, nbp) %>%
-  full_join(world_totals[world_totals$mgd == "managed",]) -> world_totals_gcp
+  full_join(world_totals[world_totals$mgd == "managed",]) ->
+  world_totals_gcp
 
 ggplot(data=dplyr::filter(world_totals_gcp,year<=2015),
        aes(x=year,y=nbp,colour=scenario, group = interaction(mgd, scenario)))+
@@ -187,36 +184,35 @@ ggplot(data=dplyr::filter(world_totals_gcp,year<=2015),
   xlab("Year")+
   theme_classic() +
   theme(axis.title = element_text(size=14),
-        axis.text = element_text(size=14)) -> fig
-
-fig
-
-
+        axis.text = element_text(size=14)) -> 
+  fig
 
 ggsave(filename="figures/coupled_vs_un_world_2015_gcp_comparison_mgd_leaves.png", 
        plot=fig,
        width=8, height=3.5)
 
 
+break
 #same as comparison with GCP above
 #but with raw GCP nbp
 gcp_data %>%
   select(year, scenario, nbp_raw) %>%
   mutate(nbp = nbp_raw) %>%
-  full_join(world_totals[world_totals$mgd != "unmanaged",]
-  ) -> raw_world_totals_gcp
+  full_join(world_totals[world_totals$mgd == "managed",]
+  ) -> 
+  raw_world_totals_gcp
 
 ggplot(data=dplyr::filter(raw_world_totals_gcp,year<=2015),
        aes(x=year,y=nbp,colour=scenario))+
   geom_line(size=1.5)+
   scale_color_uchicago()+
-  ylab("Net Biome Production (Mt C/yr)") +
+  ylab("Net Biome Production (Mt C/yr) on managed leaves") +
   xlab("Year")+
   theme_classic() +
   theme(axis.title = element_text(size=14),
         axis.text = element_text(size=14)) -> fig
 
-ggsave(filename="figures/coupled_vs_un_world_2015_raw.png",plot=fig,width=8,height=3.5)
+ggsave(filename="figures/coupled_vs_un_world_2015_raw_mgd.png",plot=fig,width=8,height=3.5)
 
 
 
