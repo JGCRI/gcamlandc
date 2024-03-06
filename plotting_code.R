@@ -221,8 +221,9 @@ ggsave(filename="figures/coupled_vs_un_world_2015_raw_mgd.png",plot=fig,width=8,
 # Assuming that GCP total land flux includes S_land on both managed and 
 # unmanaged leaves, and E_Luc is only from managed leaves
 
-# acs note -  THINK this is how Dawn made their plot.
-# much more consistent with their pattern, if you consider that our coupled
+# acs note -  THINK this is how Dawn made their plot. Both based on plots and
+# based on the comments in the 'regional' section below.
+# This is more consistent with their pattern, if you consider that our coupled
 # run should be more of a sink because our beta is MUCH higher compared to the
 # value of 0.15 (or 0.36) that we think DW ran with.
 # 
