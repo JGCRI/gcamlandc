@@ -78,7 +78,8 @@ new_emiss$luc_emissions <- (net_luc_emiss_uncoupled_offline %>%
 ## open it in a text editor, do a find and replace on ./gcam_emissions.csv and
 ## replace with ./<new file name>.csv
 ## save and close out
-
+### ALSO check the beta and q10 values in that file and update with beta=0.55
+### and q10=2.2 that we used to generate the coupled data, if needed 
 
 # read in the new ini file and run hector with it 
 ini_dir <- 'pic_data/pic_hector_ini/climate/'
