@@ -53,22 +53,22 @@ net_luc_emiss_uncoupled_offline <- read.csv(paste0(data_dir, 'all_tot_nbp.csv'),
 # tidy the gcam year jumps
 # applying NA out the gcam years and use approx() to interpolate between years 
 gcam_years <- c(1750, 1800, 1850, 1900, 1950, 1975, 1990, 2005, 2010)
-# gcam_yr_ind <- which(net_luc_emiss_uncoupled_offline$year %in% gcam_years) 
+# gcam_yr_ind <- which(net_luc_emiss_uncoupled_offline$year %in% gcam_years)
 # for (ind in gcam_yr_ind){
 #   net_luc_emiss_uncoupled_offline[ind,]$value <-0.5*(net_luc_emiss_uncoupled_offline[ind-1,]$value +
-#                                                       net_luc_emiss_uncoupled_offline[ind+1,]$value) 
+#                                                       net_luc_emiss_uncoupled_offline[ind+1,]$value)
 # }
 # net_luc_emiss_uncoupled_offline[net_luc_emiss_uncoupled_offline$year == 2010,]$value <-
 #   net_luc_emiss_uncoupled_offline[net_luc_emiss_uncoupled_offline$year == 2009,]$value
 
 # consider using this pipeline to fill NAs for gcam_years and interpolating to
 # re-fill NAs
-net_luc_emiss_uncoupled_offline %>% 
+net_luc_emiss_uncoupled_offline <- net_luc_emiss_uncoupled_offline %>%
   # replace values for years in gcam_years with NAs
-  mutate(value = replace(value, year %in% gcam_years, NA)) %>% 
+  mutate(value = replace(value, year %in% gcam_years, NA)) %>%
   # if there is an NA in the value column approximate that value, otherwise use original value
-  mutate(value = ifelse(is.na(value), 
-                        approx(year, value, xout= year, rule = 1)$y, 
+  mutate(value = ifelse(is.na(value),
+                        approx(year, value, xout= year, rule = 2)$y, # rule two copies 2009 value to 2010
                         value))
 
 # # make a new emissions data frame that is identical to the old but with
@@ -94,43 +94,44 @@ new_emiss <- orig_emiss %>%
   select(-value)
 
 # write new_emission .csv
-write.csv(new_emiss, paste0(ini_dir, 'new_emissions_test.csv'), quote = FALSE, row.names = F)
+write.csv(new_emiss, paste0(ini_dir, 'new_emissions.csv'), quote = FALSE, row.names = FALSE)
 
-#get the header info of the original emissions data frame:
-# Probably read in but instead of skipping the first 4 lines, just read in
-# the first 4. I don't remember the read.csv() argument to do that tho
-#
-# readLines() first four lines,
+# get the header info of the original emissions data frame:
+## readLines() to read first four lines and store
 header <- readLines(paste0(ini_dir, 'gcam_emissions.csv'), n = 4)
 
-
 # add it to the new data frame and save
-## This is the example I would start from if I had time to do it - I wrote
-## this at some point.
-## https://github.com/JGCRI/osiris/blob/b6cb3e6211f93cdc7d0ad91a5fde3fbae00d40e7/R/create_AgProdChange_xml.R#L68
-dat_new_emiss <- readLines(paste0(ini_dir, 'new_emissions_test.csv'))
-dat <- c(header, dat_orig)
-writeLines(dat, paste0(ini_dir, "new_emissions_test.csv"))
+## readLines() of the new_emiss .csv file
+dat_new_emiss <- readLines(paste0(ini_dir, 'new_emissions.csv'))
 
-##  offline: copy over the ini file with a new name 
-## open it in a text editor, do a find and replace on ./gcam_emissions.csv and
-## replace with ./<new file name>.csv
+## concatenate with header
+dat <- c(header, dat_new_emiss)
+
+## and write new lines
+writeLines(dat, paste0(ini_dir, "new_emissions.csv"))
+
+# replace old emissions file path with new emissions file path
+## readLines() of the old emissions file path
 old_emission_ini <- readLines(paste0(ini_dir, 'hector-gcam.ini'))
-new_emission_ini <- gsub("./gcam_emissions.csv", "new_emissions_test.csv", old_emission_ini)
+
+## substitute old emissions path with new emissions path in the old emissions ini
+new_emission_ini <- gsub("./gcam_emissions.csv", "./new_emissions.csv", old_emission_ini)
+
+## write lines for the new emisisons ini.
 writeLines(new_emission_ini, paste0(ini_dir, 'new-hector-gcam.ini'))
 
-## 
 ## save and close out
 ### ALSO check the beta and q10 values in that file and update with beta=0.55
 ### and q10=2.2 that we used to generate the coupled data, if needed 
 
 # read in the new ini file and run hector with it 
-ini_file <- paste0(ini_dir, 'hector-gcam.ini') # update to whatever name of new file
+ini_file <- paste0(ini_dir, 'new-hector-gcam.ini') # update to whatever name of new file
 core <- hector::newcore(ini_file)
 
-hector::run(core, runtodate = 2005)#gcam_emissions.csv file only goes to 2005
+hector::run(core, runtodate = 2005) #gcam_emissions.csv file only goes to 2005
 
-
+out <- fetchvars(core, 1750:2005, vars = NBP())
+head(out)
 # If hector::run returns an interpolation error, it means we gave it a runtodate
 # that is later than the emissions file actually has data for.
 
