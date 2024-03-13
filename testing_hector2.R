@@ -37,6 +37,7 @@ ggplot(out) + geom_line(aes(x = year, y = value, color = scenario))
 
 # GCAM scenario
 # the orignal gcam emissions the ini file calls:
+ini_dir <- 'pic_data/pic_hector_ini/climate/'
 orig_emiss <- read.csv(paste0(ini_dir, 'gcam_emissions.csv'), skip = 4, stringsAsFactors = F)
 
 # read in our LUC emissions fromt he uncoupled model and aggregate to global"
@@ -50,41 +51,82 @@ net_luc_emiss_uncoupled_offline <- read.csv(paste0(data_dir, 'all_tot_nbp.csv'),
   ungroup 
 
 # tidy the gcam year jumps
+# applying NA out the gcam years and use approx() to interpolate between years 
 gcam_years <- c(1750, 1800, 1850, 1900, 1950, 1975, 1990, 2005, 2010)
-gcam_yr_ind <- which(net_luc_emiss_uncoupled_offline$year %in% gcam_years) 
-for (ind in gcam_yr_ind){
-  net_luc_emiss_uncoupled_offline[ind,]$value <-0.5*(net_luc_emiss_uncoupled_offline[ind-1,]$value +
-                                                      net_luc_emiss_uncoupled_offline[ind+1,]$value) 
-}
-net_luc_emiss_uncoupled_offline[net_luc_emiss_uncoupled_offline$year == 2010,]$value <-
-  net_luc_emiss_uncoupled_offline[net_luc_emiss_uncoupled_offline$year == 2009,]$value
+# gcam_yr_ind <- which(net_luc_emiss_uncoupled_offline$year %in% gcam_years) 
+# for (ind in gcam_yr_ind){
+#   net_luc_emiss_uncoupled_offline[ind,]$value <-0.5*(net_luc_emiss_uncoupled_offline[ind-1,]$value +
+#                                                       net_luc_emiss_uncoupled_offline[ind+1,]$value) 
+# }
+# net_luc_emiss_uncoupled_offline[net_luc_emiss_uncoupled_offline$year == 2010,]$value <-
+#   net_luc_emiss_uncoupled_offline[net_luc_emiss_uncoupled_offline$year == 2009,]$value
 
-# make a new emissions data frame that is identical to the old but with
-# luc_emissions column updated:
-new_emiss <- orig_emiss
-new_emiss$luc_emissions <- (net_luc_emiss_uncoupled_offline %>%
-                                 filter(year %in% min(orig_emiss$Date):max(orig_emiss$Date)))$value
+# consider using this pipeline to fill NAs for gcam_years and interpolating to
+# re-fill NAs
+net_luc_emiss_uncoupled_offline %>% 
+  # replace values for years in gcam_years with NAs
+  mutate(value = replace(value, year %in% gcam_years, NA)) %>% 
+  # if there is an NA in the value column approximate that value, otherwise use original value
+  mutate(value = ifelse(is.na(value), 
+                        approx(year, value, xout= year, rule = 1)$y, 
+                        value))
 
-# get the header info of the original emissions data frame:
-## Probably read in but instead of skipping the first 4 lines, just read in 
-## the first 4. I don't remember the read.csv() argument to do that tho
+# # make a new emissions data frame that is identical to the old but with
+# # luc_emissions column updated:
+# new_emiss <- orig_emiss
+# # another way to do this would be to use a join -- left_join()
+# new_emiss$luc_emissions <- (net_luc_emiss_uncoupled_offline %>%
+#                                  filter(year %in% min(orig_emiss$Date):max(orig_emiss$Date)))$value
+
+# consider a pipeline that joins luc_emissions data from the offline result as a value column
+# then replaces the luc_emissions column with offline values, then drops the value column.
+new_emiss <- orig_emiss %>%
+  # left_join the offline values by Date after renaming columns in the offline results
+  left_join(net_luc_emiss_uncoupled_offline %>% 
+              # rename year column to Date
+              rename(Date = year) %>% 
+              # delete variable column from offline results  
+              select(-variable),
+            by = "Date") %>%
+  # substitute the original luc_emissions with the offline values 
+  mutate(luc_emissions = value) %>% 
+  # delete the value column, leaving the new luc_emissions column
+  select(-value)
+
+# write new_emission .csv
+write.csv(new_emiss, paste0(ini_dir, 'new_emissions_test.csv'), quote = FALSE, row.names = F)
+
+#get the header info of the original emissions data frame:
+# Probably read in but instead of skipping the first 4 lines, just read in
+# the first 4. I don't remember the read.csv() argument to do that tho
+#
+# readLines() first four lines,
+header <- readLines(paste0(ini_dir, 'gcam_emissions.csv'), n = 4)
+
 
 # add it to the new data frame and save
 ## This is the example I would start from if I had time to do it - I wrote
 ## this at some point.
 ## https://github.com/JGCRI/osiris/blob/b6cb3e6211f93cdc7d0ad91a5fde3fbae00d40e7/R/create_AgProdChange_xml.R#L68
+dat_new_emiss <- readLines(paste0(ini_dir, 'new_emissions_test.csv'))
+dat <- c(header, dat_orig)
+writeLines(dat, paste0(ini_dir, "new_emissions_test.csv"))
 
 ##  offline: copy over the ini file with a new name 
 ## open it in a text editor, do a find and replace on ./gcam_emissions.csv and
 ## replace with ./<new file name>.csv
+old_emission_ini <- readLines(paste0(ini_dir, 'hector-gcam.ini'))
+new_emission_ini <- gsub("./gcam_emissions.csv", "new_emissions_test.csv", old_emission_ini)
+writeLines(new_emission_ini, paste0(ini_dir, 'new-hector-gcam.ini'))
+
+## 
 ## save and close out
 ### ALSO check the beta and q10 values in that file and update with beta=0.55
 ### and q10=2.2 that we used to generate the coupled data, if needed 
 
 # read in the new ini file and run hector with it 
-ini_dir <- 'pic_data/pic_hector_ini/climate/'
 ini_file <- paste0(ini_dir, 'hector-gcam.ini') # update to whatever name of new file
-core <- hector::newcore(ini_file, suppresslogging = FALSE)
+core <- hector::newcore(ini_file)
 
 hector::run(core, runtodate = 2005)#gcam_emissions.csv file only goes to 2005
 
