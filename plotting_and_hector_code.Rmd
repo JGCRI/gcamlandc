@@ -244,8 +244,6 @@ read.csv('GCP_data/Global_Carbon_Budget_2022v1p0_historical_co2_tab.csv', string
   # Following slide 56 of GCP_data/papers/GCP_CarbonBudget_2023_slides_v1.0-2-Alissa-Haward.pdf
   mutate(nbp = (s_land - e_luc)) ->
   gcp_data
-# note that for both in the above, we have to take the negative for the flux to be 
-# going in the same direction as the offline model's
 ```
 
 ### Check if GCP data and Dawn's agree
@@ -333,7 +331,7 @@ ggplot(data=dplyr::filter(raw_world_totals_gcp,year<=2015),
   theme_classic() +
   theme(axis.title = element_text(size=14),
         axis.text = element_text(size=14)) -> fig
-fig
+
 
 ggsave(filename=paste0(figure_dir, "coupled_vs_un_world_2015_raw_mgd.png"),
        plot=fig,width=8,height=3.5)
@@ -463,10 +461,12 @@ core <- hector::newcore(ini_file)
 
 hector::run(core, runtodate = 2005) #gcam_emissions.csv file only goes to 2005
 
-out <- fetchvars(core, 1750:2005, vars = NBP())
+out <- fetchvars(core, 1750:2005, vars = c(GLOBAL_TAS(),CONCENTRATIONS_CO2(), NBP()))
 head(out)
 
-ggplot(out) + geom_line(aes(x = year, y = value, color = scenario)) +
+ggplot(out) + 
+  geom_line(aes(x = year, y = value, color = scenario)) +
+  facet_wrap(~variable, scales = 'free')+ 
   ggtitle('Hector with pic ini and offline LUC - beta =.55, q10=2.2 \nocean might be diff to what made coupled result') 
 
 # If hector::run returns an interpolation error, it means we gave it a runtodate
@@ -482,17 +482,36 @@ ggplot(out) + geom_line(aes(x = year, y = value, color = scenario)) +
 
 ```{r}
 #comparison with GCP
+# trim GCAM years from data
+world_totals %>% 
+  group_by (scenario, year) %>% 
+  summarize(nbp = sum(nbp)) %>%
+  ungroup %>%
+  mutate(scenario = if_else(scenario == "2. uncoupled_luc_noNPP_noRh",
+                            "4. uncoupled_LUC_only",
+                            scenario)) ->
+  trimmed_world_totals
+# not working:
+  # mutate(nbp= replace(nbp, year %in% gcam_years, NA), 
+  #        nbp = if_else(is.na(nbp),
+  #                      approx(year, nbp, xout= year, rule = 2)$y, 
+  #                      nbp)) ->
+  # trimmed_world_totals
+
+gcam_yr_ind <- which(trimmed_world_totals$year %in% gcam_years)
+for (ind in gcam_yr_ind){
+  trimmed_world_totals[ind,]$nbp <-0.5*(trimmed_world_totals[ind-1,]$nbp +
+                                                      trimmed_world_totals[ind+1,]$nbp)
+}
+trimmed_world_totals[trimmed_world_totals$year == 2010,]$nbp <-
+  trimmed_world_totals[trimmed_world_totals$year == 2009,]$nbp
+
 gcp_data %>%
   select(year, scenario, nbp) %>%
-  full_join(world_totals %>% 
-              group_by (scenario, year) %>% 
-              summarize(nbp = sum(nbp)) %>%
-              ungroup %>%
-              filter(!(year %in% gcam_years)) %>%
-              mutate(scenario = if_else(scenario == "2. uncoupled_luc_noNPP_noRh",
-                                        "4. uncoupled_LUC_only",
-                                        scenario))) %>%
-  bind_rows(out %>% select(year, nbp = value) %>%
+  full_join(trimmed_world_totals) %>%
+  bind_rows(out %>%
+              filter(variable =='NBP') %>%
+              select(year, nbp = value) %>%
               mutate(scenario ="2. uncoupled_luc_noNPP_noRh",
                      nbp = 1000*nbp)) ->
   world_totals_gcp2
@@ -564,8 +583,14 @@ in too high with beta = .55 and q10=2.2. Could split the difference to get
 q10=2 and just lower beta until the coupled run matches GCP better? Hoping KM has
 better informed choice.
 
-
 # Run Hector with each NBP.
+
+Running the NBP from the uncoupled scenario, which comes from a hector run, through
+hector again might be wrong? Plot of Tas and CO2 for that run above so can compare
+
+- look close but hard to eyeball
+
+- interesting hector test with default files, run core, fetch NBP, set nbp to that in a core, run again
 
 ```{r}
 # read in the new ini file and run hector with it 
@@ -574,24 +599,66 @@ ini_file <- paste0(ini_dir, 'new-hector-gcam.ini') # update to whatever name of 
 # Run with GCP NBP
 coreGCP <- hector::newcore(ini_file, name = 'GCP_NBPraw')
 setvar(coreGCP,gcp_data$year,"NBP_constrain",gcp_data$nbp_raw*0.001,"Pg C/yr")
-
 hector::run(coreGCP,runtodate = 2005)
-outGCP  <-fetchvars(coreGCP,dates=1750:2005,vars=c(GLOBAL_TAS(),CONCENTRATIONS_CO2()))
+outGCP  <-fetchvars(coreGCP,dates=1750:2005,vars=c(GLOBAL_TAS(),CONCENTRATIONS_CO2(), NBP()))
 
 
+# uncoupled NBP
+world_totals_gcp2 %>% 
+  filter(grepl('2. uncoupled', scenario)) ->
+  uncoupled_nbp
+
+coreUn <- hector::newcore(ini_file, name = 'uncoupled_nbp')
+setvar(coreGCP,uncoupled_nbp$year,"NBP_constrain",uncoupled_nbp$nbp*0.001,"Pg C/yr")
+hector::run(coreUn,runtodate = 2005)
+outUn  <-fetchvars(coreUn,dates=1750:2005,vars=c(GLOBAL_TAS(),CONCENTRATIONS_CO2(), NBP()))
+
+
+# coupled NBP
+world_totals_gcp2 %>% 
+  filter(grepl('3. coupled', scenario)) ->
+  coupled_nbp
+
+coreCoup <- hector::newcore(ini_file, name = 'coupled_nbp')
+setvar(coreCoup,coupled_nbp$year,"NBP_constrain",coupled_nbp$nbp*0.001,"Pg C/yr")
+hector::run(coreCoup,runtodate = 2005)
+outCoup  <-fetchvars(coreCoup,dates=1750:2005,vars=c(GLOBAL_TAS(),CONCENTRATIONS_CO2(), NBP()))
 
 
 ```
 
-## Temperature plot
-
-
+## plot
 
 ```{r}
 
+ggplot(bind_rows(outGCP, outUn, outCoup)) + 
+  geom_line(aes(x = year, y = value, color = scenario)) +
+  facet_wrap(~variable, scales = 'free') +
+  ggtitle('with pic ini - ocean old params') ->
+  nbp_hector_fig 
+nbp_hector_fig 
 
+ggsave(filename=paste0(figure_dir, "hector_results_of_NBP.png"), 
+       nbp_hector_fig,
+       width=8, height=4.5)
 
-ggplot(outGCP) + geom_line(aes(x = year, y = value, color = scenario)) +  facet_wrap(~variable, scales = 'free')
 ```
+
+
+Weird stuff: highest to lowest NBP is: Coupled, uncoupled, GCP
+
+- Highest to lowest temperature and CO2 is GCP, coupled, uncoupled. Would have expected
+GCP, uncoupled, coupled? Why is that big sink from coupled NBP not resulting in MUCH
+lower temperatures????
+
+- and why is the uncoupled NBP close GCP but the temperature is DRAMATICALLY lower
+
+- Maybe I don't understand hector
+
+- I have a number in DW Sept 2022 slides that 1959-2020 atmospheric CO2 avg is
+~443 ppm, and avg temp anomaly ~1.6degC 
+
+- this plot only goes to 2005 so the Hector run with GCP might be a little higher
+than that but with updated ocean param, maybe not bad.
 
 
