@@ -5,7 +5,6 @@
 *.Rproj
 .Rproj.user
 *.RDS
-*.html
 *.xml
 *.zip
 

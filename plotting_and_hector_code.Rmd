@@ -529,8 +529,41 @@ more of a sink.
 
 - This _was_ the case in Dawn's figures as best we could tell - have to infer
 from their figure's uncoupled plus how our 'uncoupled' changes before and
-after we plot hector's NBP
+after we plot hector's NBP. 
 
 
 - Suggests that we need different beta and q10 values when having spatial dynamics.
-ACS at least
+
+- based on Dawn's results, lower beta
+
+- ACS at least, this seems reasonable considering we now have Leaf level NPP and
+Rh affecting densities. 
+
+- having the same beta and q10 for every leaf is going to be wrong no matter 
+what, the point is that now we have the option to do better with more research.
+
+- And for now, it just means that having the leaf-level dynamics means we need
+a different beta and q10 for every leaf than for old style runs.
+
+- there's _probably_ some averageing we could do to figure out ok if we estimate
+(roughly, because it's wrong anyway) a beta and q10 value that gets the coupled
+version closer to GCP, what would the Old-style Hector beta and q10 need to be
+for the uncoupled version to match the coupled. 
+
+- guess we could do the reverse easily, run the uncoupled through Hector for a 
+bunch of different beta and q10 values to see what makes resulting NBP match 
+coupled.
+
+- For paper, could imagine this plot without `scenario 4` but with two different
+versions of the 'coupled': one with the same set of beta and q10 as default Hector 
+(what we do now) but also with a 'better' beta and q10 value to match GCP
+
+- other notes, considering Hector's new beta and q10 value: recent history
+coming in too low compared to GCP with beta = .53, q10 = 1.76. Uncoupled coming
+in too high with beta = .55 and q10=2.2. Could split the difference to get
+q10=2 and just lower beta until the coupled run matches GCP better? Hoping KM has
+better informed choice.
+
+# Run Hector with each NBP.
+
+## Temperature plot
