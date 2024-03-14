@@ -564,6 +564,34 @@ in too high with beta = .55 and q10=2.2. Could split the difference to get
 q10=2 and just lower beta until the coupled run matches GCP better? Hoping KM has
 better informed choice.
 
+
 # Run Hector with each NBP.
 
+```{r}
+# read in the new ini file and run hector with it 
+ini_file <- paste0(ini_dir, 'new-hector-gcam.ini') # update to whatever name of new file
+
+# Run with GCP NBP
+coreGCP <- hector::newcore(ini_file, name = 'GCP_NBPraw')
+setvar(coreGCP,gcp_data$year,"NBP_constrain",gcp_data$nbp_raw*0.001,"Pg C/yr")
+
+hector::run(coreGCP,runtodate = 2005)
+outGCP  <-fetchvars(coreGCP,dates=1750:2005,vars=c(GLOBAL_TAS(),CONCENTRATIONS_CO2()))
+
+
+
+
+```
+
 ## Temperature plot
+
+
+
+```{r}
+
+
+
+ggplot(outGCP) + geom_line(aes(x = year, y = value, color = scenario)) +  facet_wrap(~variable, scales = 'free')
+```
+
+
