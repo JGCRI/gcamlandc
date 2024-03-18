@@ -1,4 +1,8 @@
 
+library(dplyr)
+library(zoo)
+library(ggplot2)
+
 plot_data_all <- read.csv("plot_data_14Mar_2024/all_tot_nbp.csv",
                           stringsAsFactors = F)
 
@@ -37,12 +41,14 @@ gcp_data %>%
 
 world_totals_gcp$beta <- "Beta = 0.22"
 
-ggplot(data=dplyr::filter(world_totals_gcp,year<=2020),
+ggplot(data=dplyr::filter(world_totals_gcp,year<=2015),
        aes(x=year,y=nbp,colour=scenario, group = scenario))+
   geom_hline(yintercept = 0) +
+  geom_hline(yintercept = 3000) +
   geom_line(size=1.5, aes(linetype = beta))+
   scale_color_uchicago()+
   ylab("Net Biome Production (Mt C/yr)") +
+  ylim(-1000,3000) +
   xlab("Year") + 
   ggtitle('GCAM-Hector (all leaves) vs GCP (all leaves).
           \nNBP is inaccurate label for uncoupled case which is -LUC_e') + 
@@ -53,27 +59,27 @@ ggplot(data=dplyr::filter(world_totals_gcp,year<=2020),
 
 
 # Option to just read in once above has been executed:
-# alt_plot_data_all <- read.csv(paste0(data_dir, 'all_tot_nbp.csv'),
-#                           stringsAsFactors = F)
+alt_plot_data_all <- read.csv("plot_data_06Mar_2024/all_tot_nbp.csv",
+                          stringsAsFactors = F)
 # 
 # ################### Plotting ######################
 # 
 # 
 # # Reshape data a bit
-# alt_plot_data_all %>%
-#   select(year, region, landleaf, name, scenario, variable, value) %>%
-#   # Clarify that the uncoupled model's "nbp" is actually just the 
-#   # land use change emissions of the old GCAM way:
-#   # delta_land * constant carbon density
-#   # in a full GCAM run, this land use change emission passes to hector, which
-#   # simulates global NPP and Rh and combines the 3 processes to get NBP.
-#   # In the coupled run, all three of these processes are occuring at the land 
-#   # leaf level, so it is a true NBP (or at least more true than for the uncoupled).
-#   mutate(scenario = if_else(scenario == 'uncoupled',
-#                             '2. uncoupled_luc_noNPP_noRh',
-#                             '3. coupled_luc_NPP_Rh'))   -> 
-#   alt_for_emissions
-# rm(alt_plot_data_all)
+alt_plot_data_all %>%
+  select(year, region, landleaf, name, scenario, variable, value) %>%
+  # Clarify that the uncoupled model's "nbp" is actually just the
+  # land use change emissions of the old GCAM way:
+  # delta_land * constant carbon density
+  # in a full GCAM run, this land use change emission passes to hector, which
+  # simulates global NPP and Rh and combines the 3 processes to get NBP.
+  # In the coupled run, all three of these processes are occuring at the land
+  # leaf level, so it is a true NBP (or at least more true than for the uncoupled).
+  mutate(scenario = if_else(scenario == 'uncoupled',
+                            '2. uncoupled_luc_noNPP_noRh',
+                            '3. coupled_luc_NPP_Rh'))   ->
+  alt_for_emissions
+rm(alt_plot_data_all)
 
 alt_for_emissions %>%
   group_by(scenario, year) %>% 
@@ -91,12 +97,14 @@ gcp_data %>%
 
 alt_world_totals_gcp$beta <- "Beta = 0.55"
 
-ggplot(data=dplyr::filter(alt_world_totals_gcp,year<=2020),
+ggplot(data=dplyr::filter(alt_world_totals_gcp,year<=2015),
        aes(x=year,y=nbp,colour=scenario, group = scenario))+
   geom_hline(yintercept = 0) +
+  geom_hline(yintercept = 3000) +
   geom_line(size=1.5, aes(linetype = beta))+
   scale_color_uchicago()+
   ylab("Net Biome Production (Mt C/yr)") +
+  ylim(-1000,3000) +
   xlab("Year") + 
   ggtitle('GCAM-Hector (all leaves) vs GCP (all leaves).
           \nNBP is inaccurate label for uncoupled case which is -LUC_e') + 
@@ -108,12 +116,14 @@ ggplot(data=dplyr::filter(alt_world_totals_gcp,year<=2020),
 alt_world_totals_gcp %>%
   bind_rows(world_totals_gcp) -> beta_comp
 
-ggplot(data=dplyr::filter(beta_comp,year<=2020),
+ggplot(data=dplyr::filter(beta_comp,year<=2015),
        aes(x=year,y=nbp,colour=scenario))+
   geom_hline(yintercept = 0) +
+  geom_hline(yintercept = 3000) +
   geom_line(size=1.5, aes(linetype = beta))+
   scale_color_uchicago()+
   ylab("Net Biome Production (Mt C/yr)") +
+  ylim(-1000, 3000) +
   xlab("Year") + 
   ggtitle('GCAM-Hector (all leaves) vs GCP (all leaves).
           \nNBP is inaccurate label for uncoupled case which is -LUC_e') + 
