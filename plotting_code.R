@@ -9,19 +9,19 @@ data_dir <- 'plot_data_06Mar_2024/'
 # # create if needed, but restart Rstudio to free up memory
 # source('read_in_landcalcs.R') 
 
-# Not bad run-wise but does take a few min:
-# bind_rows(read.csv(paste0(data_dir, 'ref_plot_data.csv'),
-#                    stringsAsFactors = F) %>%
-#             select(year, region, landleaf, name, scenario, tot_nbp) %>%
-#             rename(value=tot_nbp)%>%
-#             mutate(variable = 'tot_nbp'),
-#           read.csv(paste0(data_dir, 'pro_plot_data.csv'),
-#                    stringsAsFactors = F) %>%
-#             select(year, region, landleaf, name, scenario, tot_nbp) %>%
-#             rename(value=tot_nbp)%>%
-#             mutate(variable = 'tot_nbp')
-# ) ->
-#   plot_data_all 
+#Not bad run-wise but does take a few min:
+bind_rows(read.csv(paste0(data_dir, 'ref_plot_data.csv'),
+                   stringsAsFactors = F) %>%
+            select(year, region, landleaf, name, scenario, tot_nbp) %>%
+            rename(value=tot_nbp)%>%
+            mutate(variable = 'tot_nbp'),
+          read.csv(paste0(data_dir, 'pro_plot_data.csv'),
+                   stringsAsFactors = F) %>%
+            select(year, region, landleaf, name, scenario, tot_nbp) %>%
+            rename(value=tot_nbp)%>%
+            mutate(variable = 'tot_nbp')
+) ->
+  plot_data_all
 # 
 # write.csv(plot_data_all, paste0(data_dir, 'all_tot_nbp.csv'), row.names = F)
 
@@ -106,7 +106,7 @@ for_emissions %>%
   world_totals_static
 
 #combine for global
-world_totals <- bind_rows(world_totals_static, 
+world_totals <- bind_rows(#world_totals_static, 
                           world_totals_mgd, world_totals_unmgd)
 
 
@@ -181,6 +181,30 @@ ggplot(data=dplyr::filter(raw_world_totals_gcp,year<=2015),
 
 ggsave(filename="figures/coupled_vs_un_world_2015_raw.png",plot=fig,width=8,height=3.5)
 
+
+
+#comparison with GCP, all data
+gcp_data %>%
+  select(year, scenario, nbp) %>%
+  full_join(world_totals %>% 
+              na.omit(.) %>%
+              group_by(scenario, year) %>%
+              summarise(nbp = sum(nbp)) %>%
+              ungroup()) %>%
+  ungroup() -> world_totals_gcp_alldat
+
+ggplot(data= world_totals_gcp_alldat) +
+  geom_line(size=1.5, aes(x=year,y=nbp,colour=scenario, group = scenario))+
+  scale_color_uchicago()+
+  ylab("Net Biome Production (Mt C/yr)") +
+  xlab("Year")+
+  theme_classic() +
+  theme(axis.title = element_text(size=14),
+        axis.text = element_text(size=14)) #-> fig
+
+#ggsave(filename="figures/altBeta_comparison.png", 
+       # plot=fig,
+       # width=8, height=3.5)
 
 
 
