@@ -26,3 +26,6 @@ Feb24_set4of5/*.csv
 Feb24_set5of5/*.csvFeb24_set5of5/*.csv
 
 *.png
+figures/coupled_vs_un_world_2015_gcp_comparison_mgd_leaves.png
+figures/coupled_vs_un_world_2015_gcp_comparison_mgd_leaves_w_ELUC.png
+figures/coupled_vs_un_world_2015_raw_mgd.png
