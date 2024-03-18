@@ -9,19 +9,19 @@ data_dir <- 'plot_data_06Mar_2024/'
 # # create if needed, but restart Rstudio to free up memory
 # source('read_in_landcalcs.R') 
 
-#Not bad run-wise but does take a few min:
-bind_rows(read.csv(paste0(data_dir, 'ref_plot_data.csv'),
-                   stringsAsFactors = F) %>%
-            select(year, region, landleaf, name, scenario, tot_nbp) %>%
-            rename(value=tot_nbp)%>%
-            mutate(variable = 'tot_nbp'),
-          read.csv(paste0(data_dir, 'pro_plot_data.csv'),
-                   stringsAsFactors = F) %>%
-            select(year, region, landleaf, name, scenario, tot_nbp) %>%
-            rename(value=tot_nbp)%>%
-            mutate(variable = 'tot_nbp')
-) ->
-  plot_data_all
+# Not bad run-wise but does take a few min:
+# bind_rows(read.csv(paste0(data_dir, 'ref_plot_data.csv'),
+#                    stringsAsFactors = F) %>%
+#             select(year, region, landleaf, name, scenario, tot_nbp) %>%
+#             rename(value=tot_nbp)%>%
+#             mutate(variable = 'tot_nbp'),
+#           read.csv(paste0(data_dir, 'pro_plot_data.csv'),
+#                    stringsAsFactors = F) %>%
+#             select(year, region, landleaf, name, scenario, tot_nbp) %>%
+#             rename(value=tot_nbp)%>%
+#             mutate(variable = 'tot_nbp')
+# ) ->
+#   plot_data_all 
 # 
 # write.csv(plot_data_all, paste0(data_dir, 'all_tot_nbp.csv'), row.names = F)
 
@@ -32,13 +32,23 @@ plot_data_all <- read.csv(paste0(data_dir, 'all_tot_nbp.csv'),
 ################### Plotting ######################
 
 
-#pull out emissions by land type (managed vs unmanaged)
-# acs - now does nothing with way changed file io
+# Reshape data a bit
 plot_data_all %>%
   select(year, region, landleaf, name, scenario, variable, value) %>%
-  filter(variable == "tot_nbp") -> for_emissions
+  # Clarify that the uncoupled model's "nbp" is actually just the 
+  # land use change emissions of the old GCAM way:
+  # delta_land * constant carbon density
+  # in a full GCAM run, this land use change emission passes to hector, which
+  # simulates global NPP and Rh and combines the 3 processes to get NBP.
+  # In the coupled run, all three of these processes are occuring at the land 
+  # leaf level, so it is a true NBP (or at least more true than for the uncoupled).
+  mutate(scenario = if_else(scenario == 'uncoupled',
+                            '2. uncoupled_luc_noNPP_noRh',
+                            '3. coupled_luc_NPP_Rh'))   -> 
+  for_emissions
 rm(plot_data_all)
 
+# pull out emissions by land type (managed vs unmanaged):
 #all leaf names
 all_leaves <- unique(for_emissions$name)
 
@@ -59,7 +69,8 @@ static_leaves <- grep("Urban|RockIceDesert|Tundra", all_leaves, value=TRUE)
 #Dawn previously had pasture as part of unmanaged,
 #here they are counted as managed land
 
-#for managed leaves, create regional and global nbp data sets
+#for managed leaves, create regional (comparing to gasser) and 
+# global(comparing to GCP) nbp data sets
 managed_data <- dplyr::filter(for_emissions,name %in% managed_leaves)
 
 managed_data %>%
@@ -67,7 +78,6 @@ managed_data %>%
   summarise(nbp=sum(value)) %>%
   ungroup -> 
   reg_totals_mgd
-#only variable in the dataframe is nbp (see creation of for_emissions)
 reg_totals_mgd$mgd <- "managed"
 
 managed_data %>% 
@@ -95,18 +105,19 @@ unmgd_data %>%
 world_totals_unmgd$mgd <- "unmanaged"
 
 
-
 # process static leaves similarly
 # note that this includes leaves from both managed and unmanaged
 for_emissions %>%
   filter(name %in% static_leaves) %>%
   group_by(scenario, year) %>% 
   summarise(nbp=sum(value)) %>% 
-  ungroup->
+  ungroup %>%
+  mutate(mgd = 'static') ->
   world_totals_static
 
-#combine for global
-world_totals <- bind_rows(#world_totals_static, 
+# combine the managed and unmanaged leaves for global
+# Right now, ignore static. Just there for reference if needed.
+world_totals <- bind_rows(# world_totals_static, 
                           world_totals_mgd, world_totals_unmgd)
 
 
@@ -124,90 +135,179 @@ ggplot(data=world_totals,aes(x=year,y=nbp,color= scenario)) +
   theme_classic() -> fig2
 
 ggsave(filename="figures/coupled_vs_un_world_2010_mgd_comp.png", plot=fig, width=10, height=6)
-ggsave(filename="figures/coupled_vs_un_world_2010_mgd_comp2.png", plot=fig, width=10, height=6)
+ggsave(filename="figures/coupled_vs_un_world_2010_mgd_comp2.png", plot=fig2, width=10, height=6)
 
 
 
 
-################### Comparison with Global Carbon Project ######################
+################### Comparison with Global Carbon Project 1 of 2 ###############
+# Assuming that GCP total land flux is ONLY looking at managed land leaves for 
+# both S_land and E_luc
 
-###NOTE
-#change path if needed
-###
-gcp_data <- read.csv("nbp_gcp.csv")
-gcp_data$scenario <- "Global Carbon Project"
+# load the file passed from Dawn
+gcp_data_dawn <- read.csv("GCP_data/nbp_gcp.csv")
+
+# Load the file pulled directly from GCP:
+read.csv('GCP_data/Global_Carbon_Budget_2022v1p0_historical_co2_tab.csv', stringsAsFactors = F) %>%
+  select(year=Year, e_luc=land.use.change.emissions, s_land = land.sink, Units) %>%
+  tidyr::replace_na(list(e_luc=0)) %>%
+  # If we want to sum e_luc + s_land, uncomment from the `gather` to `ungroup` 
+  # calls here and comment out the `mutate`:
+  # gather(reporting_id, value, -year, -Units) %>%
+  # group_by(year, Units) %>%
+  # summarize(nbp = -sum(value, na.rm=T)) %>%
+  # ungroup %>%
+  # Following slide 56 of GCP_data/papers/GCP_CarbonBudget_2023_slides_v1.0-2-Alissa-Haward.pdf
+  mutate(nbp = -(s_land - e_luc)) ->
+  gcp_data
+# note that for both in the above, we have to take the negative for the flux to be 
+# going in the same direction as the offline model's
+
+
+# Check if nbp = -(s_land-e_luc) from the raw GCP download agrees
+# with file from Dawn:
+print("Difference to Dawn's file:")
+print(max(abs(gcp_data$nbp-gcp_data_dawn$nbp)))
+
+# Label data and convert units
+gcp_data$scenario <- "1. Global Carbon Project"
 gcp_data$nbp_raw <- gcp_data$nbp*1000
 gcp_data$nbp <- rollmean(gcp_data$nbp*1000,k=10,fill=NA)
-#may be needed if the csv does not read in correctly
-gcp_data$year <- gcp_data[,1]
 
-#comparison with GCP, unmanaged only
+#comparison with GCP
 gcp_data %>%
   select(year, scenario, nbp) %>%
-  full_join(world_totals[world_totals$mgd!= "unmanaged",]) -> world_totals_gcp
+  full_join(world_totals[world_totals$mgd == "managed",]) ->
+  world_totals_gcp
 
 ggplot(data=dplyr::filter(world_totals_gcp,year<=2015),
-       aes(x=year,y=nbp,colour=scenario))+
+       aes(x=year,y=nbp,colour=scenario, group = interaction(mgd, scenario)))+
   geom_line(size=1.5)+
   scale_color_uchicago()+
-  ylab("Net Biome Production (Mt C/yr) - world total vs GCP - unmganaged leaves") +
-  xlab("Year")+
+  ylab("Net Biome Production (Mt C/yr)") +
+  xlab("Year") +
+  ggtitle('world total (managed leaves) vs GCP total (all leaves). \nNBP is inaccurate label for uncoupled case. \nactually -LUC emissions in that case.') + 
   theme_classic() +
   theme(axis.title = element_text(size=14),
-        axis.text = element_text(size=14)) -> fig
+        axis.text = element_text(size=14)) -> 
+  fig
 
-ggsave(filename="figures/coupled_vs_un_world_2015_gcp_comparison_unmgd_leaves.png", 
+ggsave(filename="figures/coupled_vs_un_world_2015_gcp_comparison_mgd_leaves.png", 
        plot=fig,
-       width=8, height=3.5)
+       width=8, height=4.5)
 
+ggsave(filename="figures/coupled_vs_un_world_2015_gcp_comparison_mgd_leaves_w_ELUC.png", 
+       plot=fig +  
+         geom_line(data = dplyr::filter(gcp_data,year<=2015) %>%
+                     mutate(mgd = 'E_LUC'),
+                   mapping = aes(x = year, y = e_luc*1000, color =interaction(mgd, scenario))) +
+         geom_line(data = dplyr::filter(world_totals_gcp,
+                                        scenario == '2. uncoupled_luc_noNPP_noRh',
+                                        year<=2015) %>%
+                     mutate(mgd = 'E_LUC'),
+                   mapping = aes(x = year, y = -nbp, color =interaction(mgd, scenario))),
+       width=8, height=4.5)
 
 #same as comparison with GCP above
 #but with raw GCP nbp
 gcp_data %>%
   select(year, scenario, nbp_raw) %>%
   mutate(nbp = nbp_raw) %>%
-  full_join(world_totals[world_totals$mgd!= "unmanaged",]
-  ) -> raw_world_totals_gcp
+  full_join(world_totals[world_totals$mgd == "managed",]
+  ) -> 
+  raw_world_totals_gcp
 
 ggplot(data=dplyr::filter(raw_world_totals_gcp,year<=2015),
        aes(x=year,y=nbp,colour=scenario))+
   geom_line(size=1.5)+
   scale_color_uchicago()+
-  ylab("Net Biome Production (Mt C/yr)") +
+  ylab("Net Biome Production (Mt C/yr) on managed leaves") +
   xlab("Year")+
   theme_classic() +
   theme(axis.title = element_text(size=14),
         axis.text = element_text(size=14)) -> fig
 
-ggsave(filename="figures/coupled_vs_un_world_2015_raw.png",plot=fig,width=8,height=3.5)
+ggsave(filename="figures/coupled_vs_un_world_2015_raw_mgd.png",plot=fig,width=8,height=3.5)
 
 
+################### Comparison with Global Carbon Project 2 of 2 ###############
+# Assuming that GCP total land flux is land allocation, NPP, Rh effects on all 
+# leaves
 
-#comparison with GCP, all data
+# acs note -  THINK this is how Dawn made their plot. Both based on plots and
+# based on the comments in the 'regional' section below.
+# This is more consistent with their pattern, if you consider that our coupled
+# run should be more of a sink than Dawn's because our beta is MUCH higher
+# compared to the  value of 0.15 (or 0.36) that we think DW ran with.
+# 
+# The uncoupled result _should_ be pretty similar to DW `baseline`.
+# We did make some changes, including to reading in protected lands. 
+# But our uncoupled result should be pretty close to Dawn's.
+
+# clip the world totals values on the GCAM period years:
+gcam_years <- c(1800, 1850, 1900, 1950, 1975, 1990, 2005, 2010, 2015)
+
+#comparison with GCP
 gcp_data %>%
   select(year, scenario, nbp) %>%
   full_join(world_totals %>% 
-              na.omit(.) %>%
-              group_by(scenario, year) %>%
-              summarise(nbp = sum(nbp)) %>%
-              ungroup()) %>%
-  ungroup() -> world_totals_gcp_alldat
+              group_by (scenario, year) %>% 
+              summarize(nbp = sum(nbp)) %>%
+              ungroup %>%
+              filter(!(year %in% gcam_years))) ->
+  world_totals_gcp2
 
-ggplot(data= world_totals_gcp_alldat) +
-  geom_line(size=1.5, aes(x=year,y=nbp,colour=scenario, group = scenario))+
+ggplot(data=dplyr::filter(world_totals_gcp2,year<=2015),
+       aes(x=year,y=nbp,colour=scenario, group = scenario))+
+  geom_line(size=1.5)+
   scale_color_uchicago()+
   ylab("Net Biome Production (Mt C/yr)") +
-  xlab("Year")+
+  xlab("Year") +
+  ggtitle('world total (all leaves) vs GCP total (all leaves). \nNBP is inaccurate label for uncoupled case. \nactually -LUC emissions in that case.') + 
   theme_classic() +
   theme(axis.title = element_text(size=14),
-        axis.text = element_text(size=14)) #-> fig
+        axis.text = element_text(size=14)) -> 
+  fig2
 
-#ggsave(filename="figures/altBeta_comparison.png", 
-       # plot=fig,
-       # width=8, height=3.5)
+ggsave(filename="figures/coupled_vs_un_world_2015_gcp_comparison_all_leaves.png", 
+       plot=fig2,
+       width=8, height=4.5)
+
+ggsave(filename="figures/coupled_vs_un_world_2015_gcp_comparison_all_leaves_clip_y_compare_DW.png", 
+       plot=fig2+ylim(-2000, 1200),
+       width=8, height=4.5)
 
 
 
+
+################### climate data ######################
+
+#TODO
+
+#not sure if these two categories are still relevant
+#seems that Dawn means "baseline" as in, no coupling with Hector???
+ref_climate_data <- read.csv("Feb24_set2of5/climate_data_UnCoupled_pro_newBeta_newQ10.csv")
+pro_climate_data <- read.csv("Feb24_set3of5/climate_data_Coupled_pro_newBeta_newQ10.csv")
+
+ref_climate_data$scenario <- "uncoupled"
+pro_climate_data$scenario <- "coupled"
+
+ref_climate_data %>%
+  bind_rows(pro_climate_data) %>%
+  select(-X) -> climate_data
+
+# base_climate_data$scenario <- "baseline"
+# full_climate_data$scenario <- "fully-coupled"
+# all_climate <- dplyr::bind_rows(base_climate_data,full_climate_data)
+
+ggplot(data=dplyr::filter(climate_data,year<=2050),aes(x=year,y=value))+
+  geom_line()+
+  facet_grid(scenario ~ variable, scales="free_y")+
+  theme_classic() -> fig
+ggsave(filename=paste0("figures/coupled_vs_un_climate_data.png"),plot=fig,width=10,height=6)
+
+
+break
 ################### Regional Plots ######################
 
 #not sure if it makes sense to have individual and combined scenarios with managed and unmanaged
@@ -365,29 +465,4 @@ read_luc_data <- function() {
 }
 
 
-################### climate data ######################
-
-#TODO
-
-#not sure if these two categories are still relevant
-#seems that Dawn means "baseline" as in, no coupling with Hector???
-ref_climate_data <- read.csv("Feb24_set2of5/climate_data_UnCoupled_pro_newBeta_newQ10.csv")
-pro_climate_data <- read.csv("Feb24_set3of5/climate_data_Coupled_pro_newBeta_newQ10.csv")
-
-ref_climate_data$scenario <- "uncoupled"
-pro_climate_data$scenario <- "coupled"
-
-ref_climate_data %>%
-  bind_rows(pro_climate_data) %>%
-  select(-X) -> climate_data
-
-# base_climate_data$scenario <- "baseline"
-# full_climate_data$scenario <- "fully-coupled"
-# all_climate <- dplyr::bind_rows(base_climate_data,full_climate_data)
-
-ggplot(data=dplyr::filter(climate_data,year<=2050),aes(x=year,y=value))+
-  geom_line()+
-  facet_grid(scenario ~ variable, scales="free_y")+
-  theme_classic() -> fig
-ggsave(filename=paste0("figures/coupled_vs_un_climate_data.png"),plot=fig,width=10,height=6)
 

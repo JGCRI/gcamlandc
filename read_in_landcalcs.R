@@ -1,15 +1,11 @@
 
 library(dplyr)
 
-write_dir <- 'plot_data_06Mar_2024/'
+write_dir <- 'plot_data_14Mar_2024/'
 
 ###NOTE
 # file paths will need to be changed if new output is generated from run_land_calc.R
 ###
-
-#source this code to create two identical datasets,
-#one with baseline or reference GCAM land allocation
-#the other with protected land turned on for GCAM land allocation
 
 #files are large, sourcing takes a moment
 
@@ -17,11 +13,12 @@ year0 <- 1745
 last_year <- 2100
 
 #reference data (protected = TRUE, spatially resolved = TRUE, coupled = FALSE)
-ref_AG_emissions <- read.csv("alt_2of5/ag_emiss_UnCoupled_pro_Beta0.22.csv", row.names = 1)
-ref_BG_emissions <- read.csv("alt_2of5/bg_emiss_UnCoupled_pro_Beta0.22.csv", row.names = 1)
+# AND cCycling=FALSE -> Original GCAM Hector approach
+ref_AG_emissions <- read.csv("Feb24_set2of5/ag_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
+ref_BG_emissions <- read.csv("Feb24_set2of5/bg_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
 # ref_climate_data <- read.csv("Feb24_set2of5/climate_data_UnCoupled_pro_newBeta_newQ10.csv")
 # ref_gcam_land <- read.csv("Feb24_set2of5/gcam_land_alloc.csv")
-ref_leaf_data <- read.csv("alt_2of5/leaf_data_UnCoupled_pro_Beta0.22.csv")
+ref_leaf_data <- read.csv("Feb24_set2of5/leaf_data_Uncoupled_pro_newBeta_newQ10.csv")
 # ref_leaf_params <- read.csv("Feb24_set2of5/leaf_params_Uncoupled_pro_newBeta_newQ10.csv")
 
 
@@ -54,34 +51,32 @@ rm(ref_BG_final)
 rm(ref_leaf_data)
 
 # calculate total net biome production
-ref_plot_data$tot_nbp <- ref_plot_data$ag_emiss + ref_plot_data$bg_emiss
+ref_plot_data$tot_land_to_atm_emiss <- ref_plot_data$ag_emiss + ref_plot_data$bg_emiss
 # TODO
 #check if this gets used anywhere
 ref_plot_data$npp_rh <- ref_plot_data$NPP/ref_plot_data$Rh
 
-ref_plot_data %>%
-  mutate(scenario = "uncoupled") -> ref_plot_data
-
-write.csv(ref_plot_data, paste0(write_dir, "ref_plot_data.csv"))
+write.csv(ref_plot_data %>% mutate(scenario='uncoupled'),
+          paste0(write_dir, "ref_plot_data.csv"), row.names = FALSE)
 
 # make long for plotting
 ref_plot_data_long <- ref_plot_data %>%
   tidyr::pivot_longer(cols=c("land_alloc","agCDensity","bgCDensity","agCarbon",
-                             "bgCarbon","NPP","Rh","litter","bg_emiss","ag_emiss","tot_nbp", "npp_rh"),
+                             "bgCarbon","NPP","Rh","litter","bg_emiss","ag_emiss","tot_land_to_atm_emiss", "npp_rh"),
                       names_to="variable",
                       values_to="value")
 ref_plot_data_long$scenario <- "uncoupled"
 rm(ref_plot_data)
 
-write.csv(ref_plot_data_long, "ref_plot_data_long.csv")
+write.csv(ref_plot_data_long, paste0(write_dir, "ref_plot_data_long.csv"), row.names = FALSE)
 rm(ref_plot_data_long)
 
 #fully coupled data (protected = TRUE,  spatially resolved = TRUE, coupled = TRUE)
-pro_AG_emissions <- read.csv("alt_3of5/ag_emiss_Coupled_pro_Beta0.22.csv", row.names = 1)
-pro_BG_emissions <- read.csv("alt_3of5/bg_emiss_Coupled_pro_Beta0.22.csv", row.names = 1)
+pro_AG_emissions <- read.csv("Feb24_set3of5/ag_emiss_Coupled_pro_newBeta_newQ10.csv", row.names = 1)
+pro_BG_emissions <- read.csv("Feb24_set3of5/bg_emiss_Coupled_pro_newBeta_newQ10.csv", row.names = 1)
 # pro_climate_data <- read.csv("Feb24_set3of5/climate_data_Coupled_pro_newBeta_newQ10.csv")
 # pro_gcam_land <- read.csv("Feb24_set3of5/gcam_land_alloc.csv")
-pro_leaf_data <- read.csv("alt_3of5/leaf_data_Coupled_pro_Beta0.22.csv")
+pro_leaf_data <- read.csv("Feb24_set3of5/leaf_data_Coupled_pro_newBeta_newQ10.csv")
 # pro_leaf_params <- read.csv("Feb24_set3of5/leaf_params_Coupled_pro_newBeta_newQ10.csv")
 
 # transform bg emissions to format able to be joined with other leaf data
@@ -113,7 +108,7 @@ rm(pro_AG_final)
 rm(pro_BG_final)
 
 # calculate total net biome production
-pro_plot_data$tot_nbp <- pro_plot_data$ag_emiss + pro_plot_data$bg_emiss
+pro_plot_data$tot_land_to_atm_emiss <- pro_plot_data$ag_emiss + pro_plot_data$bg_emiss
 # TODO
 #check if this gets used anywhere
 pro_plot_data$npp_rh <- pro_plot_data$NPP/pro_plot_data$Rh
@@ -126,7 +121,7 @@ write.csv(pro_plot_data %>% mutate(scenario='coupled'),
 # make long for plotting
 pro_plot_data_long <- pro_plot_data %>%
   tidyr::pivot_longer(cols=c("land_alloc","agCDensity","bgCDensity","agCarbon",
-                             "bgCarbon","NPP","Rh","litter","bg_emiss","ag_emiss","tot_nbp", "npp_rh"),
+                             "bgCarbon","NPP","Rh","litter","bg_emiss","ag_emiss","tot_land_to_atm_emiss", "npp_rh"),
                       names_to="variable",
                       values_to="value") %>%
   mutate(scenario = 'coupled') 
