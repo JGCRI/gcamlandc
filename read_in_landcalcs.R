@@ -19,12 +19,12 @@ last_year <- 2100
 #all things reference should become "Uncoupled"
 # Uncoupled data (protected = TRUE, spatially resolved = TRUE, coupled = FALSE)
 # AND cCycling=FALSE -> Original GCAM Hector approach
-uc_AG_emissions <- read.csv("Feb24_set2of5/ag_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
-uc_BG_emissions <- read.csv("Feb24_set2of5/bg_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
-# uc_climate_data <- read.csv("Feb24_set2of5/climate_data_UnCoupled_pro_newBeta_newQ10.csv")
-# uc_gcam_land <- read.csv("Feb24_set2of5/gcam_land_alloc.csv")
-uc_leaf_data <- read.csv("Feb24_set2of5/leaf_data_Uncoupled_pro_newBeta_newQ10.csv")
-# uc_leaf_params <- read.csv("Feb24_set2of5/leaf_params_Uncoupled_pro_newBeta_newQ10.csv")
+uc_AG_emissions <- read.csv("data/uncoupled_protected_lands_Feb24/ag_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
+uc_BG_emissions <- read.csv("data/uncoupled_protected_lands_Feb24/bg_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
+# uc_climate_data <- read.csv("data/uncoupled_protected_lands_Feb24/climate_data_UnCoupled_pro_newBeta_newQ10.csv")
+# uc_gcam_land <- read.csv("data/uncoupled_protected_lands_Feb24/gcam_land_alloc.csv")
+uc_leaf_data <- read.csv("data/uncoupled_protected_lands_Feb24/leaf_data_Uncoupled_pro_newBeta_newQ10.csv")
+# uc_leaf_params <- read.csv("data/uncoupled_protected_lands_Feb24/leaf_params_Uncoupled_pro_newBeta_newQ10.csv")
 
 
 # transform bg emissions to format able to be joined with other leaf data
@@ -78,12 +78,12 @@ rm(uc_plot_data_long)
 
 #all things protected should become "Coupled"
 #fully coupled data (protected = TRUE,  spatially resolved = TRUE, coupled = TRUE)
-coup_AG_emissions <- read.csv("Feb24_set3of5/ag_emiss_Coupled_pro_newBeta_newQ10.csv", row.names = 1)
-coup_BG_emissions <- read.csv("Feb24_set3of5/bg_emiss_Coupled_pro_newBeta_newQ10.csv", row.names = 1)
-# coup_climate_data <- read.csv("Feb24_set3of5/climate_data_Coupled_pro_newBeta_newQ10.csv")
-# coup_gcam_land <- read.csv("Feb24_set3of5/gcam_land_alloc.csv")
-coup_leaf_data <- read.csv("Feb24_set3of5/leaf_data_Coupled_pro_newBeta_newQ10.csv")
-# coup_leaf_params <- read.csv("Feb24_set3of5/leaf_params_Coupled_pro_newBeta_newQ10.csv")
+coup_AG_emissions <- read.csv("data/coupled_protected_lands_Feb24/ag_emiss_Coupled_pro_newBeta_newQ10.csv", row.names = 1)
+coup_BG_emissions <- read.csv("data/coupled_protected_lands_Feb24/bg_emiss_Coupled_pro_newBeta_newQ10.csv", row.names = 1)
+# coup_climate_data <- read.csv("data/coupled_protected_lands_Feb24/climate_data_Coupled_pro_newBeta_newQ10.csv")
+# coup_gcam_land <- read.csv("data/coupled_protected_lands_Feb24/gcam_land_alloc.csv")
+coup_leaf_data <- read.csv("data/coupled_protected_lands_Feb24/leaf_data_Coupled_pro_newBeta_newQ10.csv")
+# coup_leaf_params <- read.csv("data/coupled_protected_lands_Feb24/leaf_params_Coupled_pro_newBeta_newQ10.csv")
 
 # transform bg emissions to format able to be joined with other leaf data
 coup_BG <- data.frame(t(coup_BG_emissions))
