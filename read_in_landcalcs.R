@@ -1,7 +1,7 @@
 
 library(dplyr)
 
-write_dir <- 'plot_data_14Mar_2024/'
+write_dir <- 'results/plot_data_14Mar_2024/'
 
 ###NOTE
 # file paths will need to be changed if new output is generated from run_land_calc.R
