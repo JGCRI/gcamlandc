@@ -62,7 +62,7 @@ This block defaults to FALSE for evaluation while knitting
 source('read_in_landcalcs.R')
 
 # Not bad run-wise but does take a few min:
-bind_rows(read.csv(paste0(data_dir, 'ref_plot_data.csv'),
+bind_rows(read.csv(paste0(data_dir, 'uc_plot_data.csv'),
                    stringsAsFactors = F) %>%
             select(year, region, landleaf, name, scenario, tot_land_to_atm_emiss) %>%
             rename(value=tot_land_to_atm_emiss)%>%
@@ -188,7 +188,7 @@ world_totals <- bind_rows(# world_totals_static,
                           world_totals_mgd, world_totals_unmgd)
 
 
-#protected vs reference (aka baseline), managed vs unmanaged
+#protected vs uncoupled (aka baseline), managed vs unmanaged
 ggplot(data=world_totals,aes(x=year,y=nbp,color= mgd)) +
   geom_point()+
   ylab("Atmosphere to land Flux (Mt C/yr)") +

@@ -1,76 +1,82 @@
 
 library(dplyr)
 
-write_dir <- 'plot_data_14Mar_2024/'
+write_dir <- 'results/plot_data_14Mar_2024/'
 
 ###NOTE
 # file paths will need to be changed if new output is generated from run_land_calc.R
 ###
+
+#
+## Aspirational goal: make this into a function so that manipulating which output gets read-in is easier
+#
 
 #files are large, sourcing takes a moment
 
 year0 <- 1745
 last_year <- 2100
 
-#reference data (protected = TRUE, spatially resolved = TRUE, coupled = FALSE)
+#all things reference should become "Uncoupled"
+# Uncoupled data (protected = TRUE, spatially resolved = TRUE, coupled = FALSE)
 # AND cCycling=FALSE -> Original GCAM Hector approach
-ref_AG_emissions <- read.csv("Feb24_set2of5/ag_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
-ref_BG_emissions <- read.csv("Feb24_set2of5/bg_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
-# ref_climate_data <- read.csv("Feb24_set2of5/climate_data_UnCoupled_pro_newBeta_newQ10.csv")
-# ref_gcam_land <- read.csv("Feb24_set2of5/gcam_land_alloc.csv")
-ref_leaf_data <- read.csv("Feb24_set2of5/leaf_data_Uncoupled_pro_newBeta_newQ10.csv")
-# ref_leaf_params <- read.csv("Feb24_set2of5/leaf_params_Uncoupled_pro_newBeta_newQ10.csv")
+uc_AG_emissions <- read.csv("Feb24_set2of5/ag_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
+uc_BG_emissions <- read.csv("Feb24_set2of5/bg_emiss_Uncoupled_pro_newBeta_newQ10.csv", row.names = 1)
+# uc_climate_data <- read.csv("Feb24_set2of5/climate_data_UnCoupled_pro_newBeta_newQ10.csv")
+# uc_gcam_land <- read.csv("Feb24_set2of5/gcam_land_alloc.csv")
+uc_leaf_data <- read.csv("Feb24_set2of5/leaf_data_Uncoupled_pro_newBeta_newQ10.csv")
+# uc_leaf_params <- read.csv("Feb24_set2of5/leaf_params_Uncoupled_pro_newBeta_newQ10.csv")
 
 
 # transform bg emissions to format able to be joined with other leaf data
-ref_BG <- data.frame(t(ref_BG_emissions))
-colnames(ref_BG) <- row.names(ref_BG_emissions)
-rm(ref_BG_emissions)
-ref_BG$year <- seq(year0,last_year)
-ref_BG_final <- ref_BG %>% tidyr::pivot_longer(cols=-c("year"),
+uc_BG <- data.frame(t(uc_BG_emissions))
+colnames(uc_BG) <- row.names(uc_BG_emissions)
+rm(uc_BG_emissions)
+uc_BG$year <- seq(year0,last_year)
+uc_BG_final <- uc_BG %>% tidyr::pivot_longer(cols=-c("year"),
                                        names_to = "name",
                                        values_to="bg_emiss")
-rm(ref_BG)
+rm(uc_BG)
 
 # same for ag emissions
-ref_AG <- data.frame(t(ref_AG_emissions))
-colnames(ref_AG) <- row.names(ref_AG_emissions)
-rm(ref_AG_emissions)
-ref_AG$year <- seq(year0,last_year)
-ref_AG_final <- ref_AG %>% tidyr::pivot_longer(cols=-c("year"),
+uc_AG <- data.frame(t(uc_AG_emissions))
+colnames(uc_AG) <- row.names(uc_AG_emissions)
+rm(uc_AG_emissions)
+uc_AG$year <- seq(year0,last_year)
+uc_AG_final <- uc_AG %>% tidyr::pivot_longer(cols=-c("year"),
                                        names_to = "name",
                                        values_to="ag_emiss")
-rm(ref_AG)
+rm(uc_AG)
 
 # combine
-ref_leaf_data %>% select(-X) %>%
-  left_join(ref_BG_final, by = c("year", "name")) %>%
-  left_join(ref_AG_final, by = c("year", "name")) -> ref_plot_data
-rm(ref_AG_final)
-rm(ref_BG_final)
-rm(ref_leaf_data)
+uc_leaf_data %>% select(-X) %>%
+  left_join(uc_BG_final, by = c("year", "name")) %>%
+  left_join(uc_AG_final, by = c("year", "name")) -> uc_plot_data
+rm(uc_AG_final)
+rm(uc_BG_final)
+rm(uc_leaf_data)
 
 # calculate total net biome production
-ref_plot_data$tot_land_to_atm_emiss <- ref_plot_data$ag_emiss + ref_plot_data$bg_emiss
+uc_plot_data$tot_land_to_atm_emiss <- uc_plot_data$ag_emiss + uc_plot_data$bg_emiss
 # TODO
 #check if this gets used anywhere
-ref_plot_data$npp_rh <- ref_plot_data$NPP/ref_plot_data$Rh
+uc_plot_data$npp_rh <- uc_plot_data$NPP/uc_plot_data$Rh
 
-write.csv(ref_plot_data %>% mutate(scenario='uncoupled'),
-          paste0(write_dir, "ref_plot_data.csv"), row.names = FALSE)
+write.csv(uc_plot_data %>% mutate(scenario='uncoupled'),
+          paste0(write_dir, "uc_plot_data.csv"), row.names = FALSE)
 
 # make long for plotting
-ref_plot_data_long <- ref_plot_data %>%
+uc_plot_data_long <- uc_plot_data %>%
   tidyr::pivot_longer(cols=c("land_alloc","agCDensity","bgCDensity","agCarbon",
                              "bgCarbon","NPP","Rh","litter","bg_emiss","ag_emiss","tot_land_to_atm_emiss", "npp_rh"),
                       names_to="variable",
                       values_to="value")
-ref_plot_data_long$scenario <- "uncoupled"
-rm(ref_plot_data)
+uc_plot_data_long$scenario <- "uncoupled"
+rm(uc_plot_data)
 
-write.csv(ref_plot_data_long, paste0(write_dir, "ref_plot_data_long.csv"), row.names = FALSE)
-rm(ref_plot_data_long)
+write.csv(uc_plot_data_long, paste0(write_dir, "uc_plot_data_long.csv"), row.names = FALSE)
+rm(uc_plot_data_long)
 
+#all things protected should become "Coupled"
 #fully coupled data (protected = TRUE,  spatially resolved = TRUE, coupled = TRUE)
 pro_AG_emissions <- read.csv("Feb24_set3of5/ag_emiss_Coupled_pro_newBeta_newQ10.csv", row.names = 1)
 pro_BG_emissions <- read.csv("Feb24_set3of5/bg_emiss_Coupled_pro_newBeta_newQ10.csv", row.names = 1)
