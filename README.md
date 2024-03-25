@@ -20,7 +20,7 @@ These include...1) Updating C density at each timestep
 		3) CO2 fertilization of photosynthesis
 		4) Net biome production constraint at each timestep
 
-The outputs are new aboveground (ag) and belowground (bg) carobn density values,
+The outputs are new aboveground (ag) and belowground (bg) carbon density values,
 as well as land-use and land-change emission data that includes these biogeochemical feedbacks.
 
 
@@ -49,6 +49,11 @@ carefully check:
 	2) all output names (ie., scenaro_name at the end of run_land_calc.R)
 	3) input files for correct implementation of land protection;
 a gcam core model database should be used for output with protected lands (protected)
+	pic_data/pic_hist_base_DB/
+	db_name = "database_basexdbGCAM",
+	scenario = Reference
 a gcam database under SSP1 should be used for output without protected lands (reference)
-
+	pic_data/pic_SSP1_base_DB/
+	db_name = "database_basexdbGCAM_SSP1"
+	scenario = "GCAM_SSP1"
 

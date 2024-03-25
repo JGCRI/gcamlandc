@@ -31,7 +31,7 @@ if (read_data){
   # get input data from GCAM
     gcam_land_alloc <- get_gcam_land_alloc(db_name="database_basexdbGCAM",
                                            gcam_dir= "pic_data/pic_hist_base_DB/",
-                                           scenario="Reference",
+                                           scenario="Reference", #here reference = land protections are in place as in core GCAM
                                            read_from_file= FALSE)
     # scenario is doing nothing when read_from_file is TRUE
     
