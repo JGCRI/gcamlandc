@@ -3,6 +3,19 @@ library(ggplot2)
 library(ggsci)
 library(zoo)
 
+
+###
+###
+###
+#Older script, the purpose of this code has migrated to plotting_and_hector_code.Rmd
+#code reflects old terms (pre-code-clean-up-party)
+###
+###
+###
+
+#You've been warned.
+
+
 ################### read-in data ######################
 data_dir <- 'plot_data_06Mar_2024/'
 
