@@ -17,12 +17,12 @@ library(zoo)
 
 
 ################### read-in data ######################
-data_dir <- 'plot_data_06Mar_2024/'
+data_dir <- 'results/plot_data_06Mar_2024/'
 
 # # create if needed, but restart Rstudio to free up memory
 # source('read_in_landcalcs.R') 
 
-# Not bad run-wise but does take a few min:
+# # Not bad run-wise but does take a few min:
 # bind_rows(read.csv(paste0(data_dir, 'ref_plot_data.csv'),
 #                    stringsAsFactors = F) %>%
 #             select(year, region, landleaf, name, scenario, tot_nbp) %>%
@@ -34,7 +34,7 @@ data_dir <- 'plot_data_06Mar_2024/'
 #             rename(value=tot_nbp)%>%
 #             mutate(variable = 'tot_nbp')
 # ) ->
-#   plot_data_all 
+#   plot_data_all
 # 
 # write.csv(plot_data_all, paste0(data_dir, 'all_tot_nbp.csv'), row.names = F)
 
@@ -299,8 +299,8 @@ ggsave(filename="figures/coupled_vs_un_world_2015_gcp_comparison_all_leaves_clip
 
 #not sure if these two categories are still relevant
 #seems that Dawn means "baseline" as in, no coupling with Hector???
-ref_climate_data <- read.csv("Feb24_set2of5/climate_data_UnCoupled_pro_newBeta_newQ10.csv")
-pro_climate_data <- read.csv("Feb24_set3of5/climate_data_Coupled_pro_newBeta_newQ10.csv")
+ref_climate_data <- read.csv("data/uncoupled_protected_lands_Feb24/climate_data_UnCoupled_pro_newBeta_newQ10.csv")
+pro_climate_data <- read.csv("data/coupled_protected_lands_Feb24/climate_data_Coupled_pro_newBeta_newQ10.csv")
 
 ref_climate_data$scenario <- "uncoupled"
 pro_climate_data$scenario <- "coupled"
