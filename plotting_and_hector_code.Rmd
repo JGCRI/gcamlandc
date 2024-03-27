@@ -21,8 +21,8 @@ library(data.table)
 library(tidyr)
 library(hector)
 
-data_dir <- 'plot_data_14Mar_2024/'
-figure_dir <- 'plot_data_14Mar_2024/figures/'
+data_dir <- 'results/plot_data_14Mar_2024/'
+figure_dir <- 'results/plot_data_14Mar_2024/figures/'
 ```
 
 # Read in data from runs
