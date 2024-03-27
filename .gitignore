@@ -1,6 +1,11 @@
 # OS files
 .DS_Store
 
+
+*.png
+*.xlsx
+*.csv
+
 # R and RStudio files
 *.Rproj
 .Rproj.user
